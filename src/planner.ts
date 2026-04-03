@@ -24,6 +24,10 @@ export interface SessionPlanRecord {
 
 const VALID_OWNERS: ReadonlySet<string> = new Set(['Thomas', 'Daniel', 'Shared'])
 
+function createPokemonId(number: string, name: string): string {
+  return `${number}|${name}`
+}
+
 function parseCsvRow(line: string): string[] {
   const result: string[] = []
   let current = ''
@@ -65,12 +69,12 @@ export function parsePokemonCsv(csvContent: string): PokemonPlan[] {
     return []
   }
 
-  return lines.slice(1).map((line, index) => {
+  return lines.slice(1).map((line) => {
     const cells = parseCsvRow(line)
     const owner = VALID_OWNERS.has(cells[3]) ? (cells[3] as Owner) : 'Shared'
 
     return {
-      id: `${cells[0]}-${cells[1]}-${index}`,
+      id: createPokemonId(cells[0], cells[1]),
       number: cells[0],
       name: cells[1],
       owner,
@@ -111,5 +115,18 @@ export function upsertOverride(
       ...current[pokemonId],
       ...update,
     },
+  }
+}
+
+export function createNextSessionPlanRecord(
+  current: SessionPlanRecord,
+  pokemonId: string,
+  update: PlanUpdate,
+  now = Date.now(),
+): SessionPlanRecord {
+  return {
+    sessionId: current.sessionId,
+    updatedAt: now > current.updatedAt ? now : current.updatedAt + 1,
+    overrides: upsertOverride(current.overrides, pokemonId, update),
   }
 }

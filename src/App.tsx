@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import csvBaseline from '../pokopia_assignment - Sheet1.csv?raw'
 import {
   applySessionOverrides,
+  createNextSessionPlanRecord,
   parsePokemonCsv,
   type Owner,
   type PlanUpdate,
   type SessionPlanRecord,
-  upsertOverride,
 } from './planner'
 import { resolveSessionId } from './session'
 import { loadSessionPlan, saveSessionPlan } from './sessionDb'
@@ -91,12 +91,7 @@ function App() {
 
   const persistUpdate = (pokemonId: string, update: PlanUpdate) => {
     setSessionPlan((current) => {
-      const next: SessionPlanRecord = {
-        sessionId,
-        updatedAt: current.updatedAt + 1,
-        overrides: upsertOverride(current.overrides, pokemonId, update),
-      }
-
+      const next = createNextSessionPlanRecord(current, pokemonId, update)
       void saveSessionPlan(next)
 
       if (typeof BroadcastChannel !== 'undefined') {

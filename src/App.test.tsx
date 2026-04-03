@@ -26,7 +26,7 @@ describe('App', () => {
       sessionId: 'group-a',
       updatedAt: 20,
       overrides: {
-        '#001-Bulbasaur-0': { owner: 'Shared' },
+        '#001|Bulbasaur': { owner: 'Shared' },
       },
     })
 
@@ -47,7 +47,7 @@ describe('App', () => {
     expect(savedRecord?.sessionId).toBe('group-a')
     expect(savedRecord?.overrides).toEqual(
       expect.objectContaining({
-        '#001-Bulbasaur-0': expect.objectContaining({ owner: 'Shared', moved: true }),
+        '#001|Bulbasaur': expect.objectContaining({ owner: 'Shared', moved: true }),
       }),
     )
 

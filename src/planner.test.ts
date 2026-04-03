@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { applySessionOverrides, parsePokemonCsv, upsertOverride } from './planner'
+import {
+  applySessionOverrides,
+  createNextSessionPlanRecord,
+  parsePokemonCsv,
+  upsertOverride,
+} from './planner'
 
 describe('planner csv parsing', () => {
   it('parses CSV rows into structured baseline entries', () => {
@@ -20,7 +25,7 @@ describe('planner csv parsing', () => {
       specialties: ['Grow'],
       idealHabitat: 'Bright',
     })
-    expect(pokemon[0].id).toContain('#001-Bulbasaur')
+    expect(pokemon[0].id).toBe('#001|Bulbasaur')
     expect(pokemon[1]).toMatchObject({
       owner: 'Daniel',
       moved: true,
@@ -42,5 +47,24 @@ describe('planner csv parsing', () => {
     expect(baseline[0].moved).toBe(false)
     expect(planned[0].owner).toBe('Shared')
     expect(planned[0].moved).toBe(true)
+  })
+
+  it('creates a monotonic session record timestamp with wall-clock input', () => {
+    const current = {
+      sessionId: 'group-a',
+      updatedAt: 500,
+      overrides: {},
+    }
+
+    const next = createNextSessionPlanRecord(current, '#001|Bulbasaur', { moved: true }, 400)
+    const nextWithFutureTime = createNextSessionPlanRecord(
+      next,
+      '#001|Bulbasaur',
+      { owner: 'Shared' },
+      800,
+    )
+
+    expect(next.updatedAt).toBe(501)
+    expect(nextWithFutureTime.updatedAt).toBe(800)
   })
 })

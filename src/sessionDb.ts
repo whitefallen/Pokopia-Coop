@@ -36,10 +36,23 @@ export async function loadSessionPlan(sessionId: string): Promise<SessionPlanRec
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readonly')
     const request = transaction.objectStore(STORE_NAME).get(sessionId)
+    let result: SessionPlanRecord | null = null
 
-    request.onsuccess = () => resolve((request.result as SessionPlanRecord | undefined) ?? null)
-    request.onerror = () => reject(request.error)
-    transaction.oncomplete = () => db.close()
+    request.onsuccess = () => {
+      result = (request.result as SessionPlanRecord | undefined) ?? null
+    }
+    transaction.oncomplete = () => {
+      db.close()
+      resolve(result)
+    }
+    transaction.onerror = () => {
+      db.close()
+      reject(transaction.error)
+    }
+    transaction.onabort = () => {
+      db.close()
+      reject(transaction.error)
+    }
   })
 }
 
@@ -55,9 +68,17 @@ export async function saveSessionPlan(record: SessionPlanRecord): Promise<void> 
     const transaction = db.transaction(STORE_NAME, 'readwrite')
     transaction.objectStore(STORE_NAME).put(record)
 
-    transaction.oncomplete = () => resolve()
-    transaction.onerror = () => reject(transaction.error)
+    transaction.oncomplete = () => {
+      db.close()
+      resolve()
+    }
+    transaction.onerror = () => {
+      db.close()
+      reject(transaction.error)
+    }
+    transaction.onabort = () => {
+      db.close()
+      reject(transaction.error)
+    }
   })
-
-  db.close()
 }

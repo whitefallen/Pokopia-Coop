@@ -6,7 +6,13 @@ function createSessionId(): string {
     return crypto.randomUUID()
   }
 
-  return `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const randomBytes = new Uint32Array(1)
+    crypto.getRandomValues(randomBytes)
+    return `session-${Date.now().toString(36)}-${randomBytes[0].toString(36)}`
+  }
+
+  return `session-${Date.now().toString(36)}`
 }
 
 export function resolveSessionId(): string {
