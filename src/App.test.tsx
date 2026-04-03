@@ -10,12 +10,16 @@ import {
 } from './session'
 import { loadSessionPlan, saveSessionPlan } from './sessionDb'
 
-vi.mock('./session', () => ({
-  resolveSessionId: vi.fn(() => 'group-a'),
-  resolvePlayerName: vi.fn(() => 'Ash'),
-  normalizePlayerName: vi.fn((value: string) => value.trim().replace(/\s+/g, ' ').slice(0, 40)),
-  setPlayerName: vi.fn(),
-}))
+vi.mock('./session', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./session')>()
+  return {
+    ...actual,
+    resolveSessionId: vi.fn(() => 'group-a'),
+    resolvePlayerName: vi.fn(() => 'Ash'),
+    normalizePlayerName: vi.fn((value: string) => actual.normalizePlayerName(value)),
+    setPlayerName: vi.fn(),
+  }
+})
 
 vi.mock('./sessionDb', () => ({
   loadSessionPlan: vi.fn(async () => null),

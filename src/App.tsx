@@ -8,6 +8,7 @@ import {
   type SessionPlanRecord,
 } from './planner'
 import {
+  createSessionId,
   normalizePlayerName,
   resolvePlayerName,
   resolveSessionId,
@@ -17,13 +18,6 @@ import { loadSessionPlan, saveSessionPlan } from './sessionDb'
 import './App.css'
 
 const CHANNEL_PREFIX = 'pokopia-coop-sync:'
-
-function createSessionId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
-  }
-  return `session-${Date.now().toString(36)}`
-}
 
 function App() {
   const [sessionId] = useState(resolveSessionId)
@@ -79,6 +73,14 @@ function App() {
         ),
       ),
     [sessionPlan.overrides],
+  )
+  const normalizedKnownPlayers = useMemo(
+    () =>
+      knownPlayers.map((knownPlayer) => ({
+        original: knownPlayer,
+        normalized: knownPlayer.toLowerCase(),
+      })),
+    [knownPlayers],
   )
   const showPlayerPrompt = playerName.length === 0
 
@@ -155,20 +157,23 @@ function App() {
     })
   }
 
-  const confirmPlayerName = (rawValue: string, allowExisting = false) => {
+  const handlePlayerNameSubmit = (rawValue: string, options?: { skipCollisionCheck?: boolean }) => {
     const normalized = normalizePlayerName(rawValue)
     if (!normalized) {
       return
     }
+    const normalizedLower = normalized.toLowerCase()
+
+    const matchingKnownPlayer = normalizedKnownPlayers.find(
+      (knownPlayer) => knownPlayer.normalized === normalizedLower,
+    )?.original
 
     if (
-      !allowExisting &&
-      !playerName &&
-      knownPlayers.some((name) => name.toLowerCase() === normalized.toLowerCase())
+      !options?.skipCollisionCheck &&
+      playerName.length === 0 &&
+      matchingKnownPlayer
     ) {
-      setPendingExistingPlayer(
-        knownPlayers.find((name) => name.toLowerCase() === normalized.toLowerCase()) ?? normalized,
-      )
+      setPendingExistingPlayer(matchingKnownPlayer)
       return
     }
 
@@ -223,7 +228,7 @@ function App() {
               onChange={(event) => setPlayerInput(event.target.value)}
               placeholder="Your name"
             />
-            <button type="button" onClick={() => confirmPlayerName(playerInput)}>
+            <button type="button" onClick={() => handlePlayerNameSubmit(playerInput)}>
               Continue
             </button>
           </div>
@@ -233,7 +238,12 @@ function App() {
                 "{pendingExistingPlayer}" already exists in this session. Join that player or use a new
                 name.
               </p>
-              <button type="button" onClick={() => confirmPlayerName(pendingExistingPlayer, true)}>
+              <button
+                type="button"
+                onClick={() =>
+                  handlePlayerNameSubmit(pendingExistingPlayer, { skipCollisionCheck: true })
+                }
+              >
                 Join as {pendingExistingPlayer}
               </button>
               <button type="button" onClick={() => setPendingExistingPlayer('')}>

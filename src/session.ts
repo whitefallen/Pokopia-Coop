@@ -2,8 +2,10 @@ const SESSION_PARAM = 'session'
 const SESSION_STORAGE_KEY = 'pokopia-coop-session-id'
 const PLAYER_PARAM = 'player'
 const PLAYER_STORAGE_PREFIX = 'pokopia-coop-player:'
+// Keep names short for compact share URLs and predictable UI rendering.
+export const MAX_PLAYER_NAME_LENGTH = 40
 
-function createSessionId(): string {
+export function createSessionId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
   }
@@ -36,7 +38,7 @@ export function resolveSessionId(): string {
 }
 
 export function normalizePlayerName(value: string): string {
-  return value.trim().replace(/\s+/g, ' ').slice(0, 40)
+  return value.trim().replace(/\s+/g, ' ').slice(0, MAX_PLAYER_NAME_LENGTH)
 }
 
 export function resolvePlayerName(sessionId: string): string {
