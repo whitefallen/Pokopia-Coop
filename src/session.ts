@@ -1,5 +1,7 @@
 const SESSION_PARAM = 'session'
 const SESSION_STORAGE_KEY = 'pokopia-coop-session-id'
+const PLAYER_PARAM = 'player'
+const PLAYER_STORAGE_PREFIX = 'pokopia-coop-player:'
 
 function createSessionId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -31,4 +33,34 @@ export function resolveSessionId(): string {
   window.history.replaceState({}, '', url)
 
   return sessionId
+}
+
+export function normalizePlayerName(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').slice(0, 40)
+}
+
+export function resolvePlayerName(sessionId: string): string {
+  const url = new URL(window.location.href)
+  const fromUrl = normalizePlayerName(url.searchParams.get(PLAYER_PARAM) ?? '')
+  if (fromUrl) {
+    localStorage.setItem(`${PLAYER_STORAGE_PREFIX}${sessionId}`, fromUrl)
+    return fromUrl
+  }
+
+  return normalizePlayerName(localStorage.getItem(`${PLAYER_STORAGE_PREFIX}${sessionId}`) ?? '')
+}
+
+export function setPlayerName(sessionId: string, playerName: string): void {
+  const normalized = normalizePlayerName(playerName)
+  const url = new URL(window.location.href)
+
+  if (normalized) {
+    localStorage.setItem(`${PLAYER_STORAGE_PREFIX}${sessionId}`, normalized)
+    url.searchParams.set(PLAYER_PARAM, normalized)
+  } else {
+    localStorage.removeItem(`${PLAYER_STORAGE_PREFIX}${sessionId}`)
+    url.searchParams.delete(PLAYER_PARAM)
+  }
+
+  window.history.replaceState({}, '', url)
 }

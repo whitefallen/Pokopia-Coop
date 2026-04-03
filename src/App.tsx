@@ -4,27 +4,83 @@ import {
   applySessionOverrides,
   createNextSessionPlanRecord,
   parsePokemonCsv,
-  type Owner,
   type PlanUpdate,
   type SessionPlanRecord,
 } from './planner'
-import { resolveSessionId } from './session'
+import {
+  normalizePlayerName,
+  resolvePlayerName,
+  resolveSessionId,
+  setPlayerName as persistPlayerName,
+} from './session'
 import { loadSessionPlan, saveSessionPlan } from './sessionDb'
 import './App.css'
 
 const CHANNEL_PREFIX = 'pokopia-coop-sync:'
 
+function createSessionId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `session-${Date.now().toString(36)}`
+}
+
 function App() {
   const [sessionId] = useState(resolveSessionId)
+  const [playerName, setPlayerName] = useState(() => resolvePlayerName(sessionId))
+  const [playerInput, setPlayerInput] = useState('')
+  const [pendingExistingPlayer, setPendingExistingPlayer] = useState('')
+  const [copiedShareLink, setCopiedShareLink] = useState(false)
   const [sessionPlan, setSessionPlan] = useState<SessionPlanRecord>({
     sessionId,
     updatedAt: 0,
     overrides: {},
   })
   const [searchTerm, setSearchTerm] = useState('')
-  const [ownerFilter, setOwnerFilter] = useState<'All' | Owner>('All')
+  const [ownerFilter, setOwnerFilter] = useState('All')
 
   const baselinePokemon = useMemo(() => parsePokemonCsv(csvBaseline), [])
+  const shareLink = useMemo(() => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('session', sessionId)
+    url.searchParams.delete('player')
+    return url.toString()
+  }, [sessionId])
+
+  const plannedPokemon = useMemo(
+    () => applySessionOverrides(baselinePokemon, sessionPlan.overrides),
+    [baselinePokemon, sessionPlan.overrides],
+  )
+
+  const ownerOptions = useMemo(() => {
+    const fromPlan = plannedPokemon.map((pokemon) => pokemon.owner)
+    const all = new Set(['Shared', ...fromPlan])
+    if (playerName) {
+      all.add(playerName)
+    }
+    return Array.from(all).sort((left, right) => {
+      if (left === 'Shared') {
+        return -1
+      }
+      if (right === 'Shared') {
+        return 1
+      }
+      return left.localeCompare(right)
+    })
+  }, [playerName, plannedPokemon])
+
+  const knownPlayers = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          Object.values(sessionPlan.overrides)
+            .map((override) => override.owner?.trim())
+            .filter((owner): owner is string => Boolean(owner && owner !== 'Shared')),
+        ),
+      ),
+    [sessionPlan.overrides],
+  )
+  const showPlayerPrompt = playerName.length === 0
 
   useEffect(() => {
     let isActive = true
@@ -65,11 +121,6 @@ function App() {
     }
   }, [sessionId])
 
-  const plannedPokemon = useMemo(
-    () => applySessionOverrides(baselinePokemon, sessionPlan.overrides),
-    [baselinePokemon, sessionPlan.overrides],
-  )
-
   const visiblePokemon = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
 
@@ -104,6 +155,45 @@ function App() {
     })
   }
 
+  const confirmPlayerName = (rawValue: string, allowExisting = false) => {
+    const normalized = normalizePlayerName(rawValue)
+    if (!normalized) {
+      return
+    }
+
+    if (
+      !allowExisting &&
+      !playerName &&
+      knownPlayers.some((name) => name.toLowerCase() === normalized.toLowerCase())
+    ) {
+      setPendingExistingPlayer(
+        knownPlayers.find((name) => name.toLowerCase() === normalized.toLowerCase()) ?? normalized,
+      )
+      return
+    }
+
+    persistPlayerName(sessionId, normalized)
+    setPlayerName(normalized)
+    setPlayerInput(normalized)
+    setPendingExistingPlayer('')
+  }
+
+  const createNewSession = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('session', createSessionId())
+    url.searchParams.delete('player')
+    window.location.assign(url.toString())
+  }
+
+  const copyShareLink = async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      return
+    }
+    await navigator.clipboard.writeText(shareLink)
+    setCopiedShareLink(true)
+    window.setTimeout(() => setCopiedShareLink(false), 1200)
+  }
+
   return (
     <main className="app">
       <header className="header">
@@ -112,7 +202,51 @@ function App() {
         <p>
           Session: <code>{sessionId}</code>
         </p>
+        <div className="session-actions">
+          <button type="button" onClick={createNewSession}>
+            Create new session
+          </button>
+          <button type="button" onClick={() => void copyShareLink()}>
+            {copiedShareLink ? 'Copied' : 'Copy share link'}
+          </button>
+        </div>
       </header>
+
+      {showPlayerPrompt ? (
+        <section className="player-prompt" aria-label="Join session">
+          <h2>Join this session</h2>
+          <p>Enter your player name so assignments can be tracked by session + player.</p>
+          <div className="player-controls">
+            <input
+              aria-label="Player name"
+              value={playerInput}
+              onChange={(event) => setPlayerInput(event.target.value)}
+              placeholder="Your name"
+            />
+            <button type="button" onClick={() => confirmPlayerName(playerInput)}>
+              Continue
+            </button>
+          </div>
+          {pendingExistingPlayer ? (
+            <div className="existing-player-choice">
+              <p>
+                "{pendingExistingPlayer}" already exists in this session. Join that player or use a new
+                name.
+              </p>
+              <button type="button" onClick={() => confirmPlayerName(pendingExistingPlayer, true)}>
+                Join as {pendingExistingPlayer}
+              </button>
+              <button type="button" onClick={() => setPendingExistingPlayer('')}>
+                Use a new name
+              </button>
+            </div>
+          ) : null}
+        </section>
+      ) : (
+        <p className="player-active">
+          You are planning as <code>{playerName}</code>.
+        </p>
+      )}
 
       <section className="stats" aria-label="Planner summary">
         <span>Total Pokémon: {plannedPokemon.length}</span>
@@ -132,18 +266,20 @@ function App() {
 
         <label>
           Owner
-          <select
-            aria-label="Owner filter"
-            value={ownerFilter}
-            onChange={(event) => setOwnerFilter(event.target.value as 'All' | Owner)}
-          >
-            <option value="All">All</option>
-            <option value="Thomas">Thomas</option>
-            <option value="Daniel">Daniel</option>
-            <option value="Shared">Shared</option>
-          </select>
-        </label>
-      </section>
+            <select
+              aria-label="Owner filter"
+              value={ownerFilter}
+              onChange={(event) => setOwnerFilter(event.target.value)}
+            >
+              <option value="All">All</option>
+              {ownerOptions.map((owner) => (
+                <option key={owner} value={owner}>
+                  {owner}
+                </option>
+              ))}
+            </select>
+          </label>
+        </section>
 
       <div className="table-wrap">
         <table>
@@ -166,13 +302,13 @@ function App() {
                   <select
                     aria-label={`Owner for ${pokemon.name}`}
                     value={pokemon.owner}
-                    onChange={(event) =>
-                      persistUpdate(pokemon.id, { owner: event.target.value as Owner })
-                    }
+                    onChange={(event) => persistUpdate(pokemon.id, { owner: event.target.value })}
                   >
-                    <option value="Thomas">Thomas</option>
-                    <option value="Daniel">Daniel</option>
-                    <option value="Shared">Shared</option>
+                    {ownerOptions.map((owner) => (
+                      <option key={`${pokemon.id}-${owner}`} value={owner}>
+                        {owner}
+                      </option>
+                    ))}
                   </select>
                 </td>
                 <td>

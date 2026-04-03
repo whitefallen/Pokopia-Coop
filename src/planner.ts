@@ -1,4 +1,4 @@
-export type Owner = 'Thomas' | 'Daniel' | 'Shared'
+export type Owner = string
 
 export interface PokemonPlan {
   id: string
@@ -21,8 +21,6 @@ export interface SessionPlanRecord {
   updatedAt: number
   overrides: Record<string, PlanUpdate>
 }
-
-const VALID_OWNERS: ReadonlySet<string> = new Set(['Thomas', 'Daniel', 'Shared'])
 
 function createPokemonId(number: string, name: string): string {
   return `${number}|${name}`
@@ -71,7 +69,7 @@ export function parsePokemonCsv(csvContent: string): PokemonPlan[] {
 
   return lines.slice(1).map((line) => {
     const cells = parseCsvRow(line)
-    const owner = VALID_OWNERS.has(cells[3]) ? (cells[3] as Owner) : 'Shared'
+    const owner = cells[3] || 'Shared'
 
     return {
       id: createPokemonId(cells[0], cells[1]),

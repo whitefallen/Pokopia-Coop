@@ -28,6 +28,64 @@ body {
   color: #475569;
 }
 
+.session-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.session-actions button,
+.player-controls button,
+.existing-player-choice button {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.player-prompt {
+  margin-top: 16px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.player-prompt h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.player-controls {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.player-controls input {
+  min-width: 220px;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.existing-player-choice {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.existing-player-choice p,
+.player-active {
+  color: #334155;
+}
+
 .stats {
   margin-top: 16px;
   display: flex;
