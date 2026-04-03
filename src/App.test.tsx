@@ -50,7 +50,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Session setup' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Player identity' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Planner workspace' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Share link')).toBeInTheDocument()
+    expect(screen.getByLabelText('Shareable session link')).toBeInTheDocument()
     expect(screen.getByText(/Session:/i)).toBeInTheDocument()
     expect(screen.getByText('group-a')).toBeInTheDocument()
     expect(screen.getByText(/You are planning as/i)).toBeInTheDocument()

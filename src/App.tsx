@@ -220,7 +220,12 @@ function App() {
           <button type="button" onClick={() => void copyShareLink()}>
             {copiedShareLink ? 'Copied' : 'Copy share link'}
           </button>
-          <input aria-label="Share link" readOnly value={shareLink} />
+          <input
+            aria-label="Shareable session link"
+            placeholder="Shareable session link"
+            readOnly
+            value={shareLink}
+          />
         </div>
       </section>
 
