@@ -1,6 +1,7 @@
 export type Owner = 'Thomas' | 'Daniel' | 'Shared'
 
 export interface PokemonPlan {
+  id: string
   number: string
   name: string
   owner: Owner
@@ -10,14 +11,15 @@ export interface PokemonPlan {
   favorites: string[]
 }
 
-export interface PlannerState {
-  pokemon: PokemonPlan[]
-  updatedAt: number
-}
-
 export interface PlanUpdate {
   owner?: Owner
   moved?: boolean
+}
+
+export interface SessionPlanRecord {
+  sessionId: string
+  updatedAt: number
+  overrides: Record<string, PlanUpdate>
 }
 
 const VALID_OWNERS: ReadonlySet<string> = new Set(['Thomas', 'Daniel', 'Shared'])
@@ -63,11 +65,12 @@ export function parsePokemonCsv(csvContent: string): PokemonPlan[] {
     return []
   }
 
-  return lines.slice(1).map((line) => {
+  return lines.slice(1).map((line, index) => {
     const cells = parseCsvRow(line)
     const owner = VALID_OWNERS.has(cells[3]) ? (cells[3] as Owner) : 'Shared'
 
     return {
+      id: `${cells[0]}-${cells[1]}-${index}`,
       number: cells[0],
       name: cells[1],
       owner,
@@ -79,23 +82,34 @@ export function parsePokemonCsv(csvContent: string): PokemonPlan[] {
   })
 }
 
-export function createPlannerState(csvContent: string): PlannerState {
-  return {
-    pokemon: parsePokemonCsv(csvContent),
-    updatedAt: Date.now(),
-  }
+export function applySessionOverrides(
+  baselinePokemon: PokemonPlan[],
+  overrides: Record<string, PlanUpdate>,
+): PokemonPlan[] {
+  return baselinePokemon.map((pokemon) => {
+    const override = overrides[pokemon.id]
+    if (!override) {
+      return pokemon
+    }
+
+    return {
+      ...pokemon,
+      owner: override.owner ?? pokemon.owner,
+      moved: override.moved ?? pokemon.moved,
+    }
+  })
 }
 
-export function updatePlannerState(
-  state: PlannerState,
-  pokemonNumber: string,
+export function upsertOverride(
+  current: Record<string, PlanUpdate>,
+  pokemonId: string,
   update: PlanUpdate,
-  now = Date.now(),
-): PlannerState {
+): Record<string, PlanUpdate> {
   return {
-    pokemon: state.pokemon.map((pokemon) =>
-      pokemon.number === pokemonNumber ? { ...pokemon, ...update } : pokemon,
-    ),
-    updatedAt: now,
+    ...current,
+    [pokemonId]: {
+      ...current[pokemonId],
+      ...update,
+    },
   }
 }

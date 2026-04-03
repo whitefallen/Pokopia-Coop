@@ -1,83 +1,79 @@
 import { useEffect, useMemo, useState } from 'react'
 import csvBaseline from '../pokopia_assignment - Sheet1.csv?raw'
 import {
-  createPlannerState,
+  applySessionOverrides,
+  parsePokemonCsv,
   type Owner,
   type PlanUpdate,
-  type PlannerState,
-  updatePlannerState,
+  type SessionPlanRecord,
+  upsertOverride,
 } from './planner'
+import { resolveSessionId } from './session'
+import { loadSessionPlan, saveSessionPlan } from './sessionDb'
 import './App.css'
 
-const STORAGE_KEY = 'pokopia-coop-plan-v1'
-const CHANNEL_NAME = 'pokopia-coop-sync'
-
-function loadState(): PlannerState {
-  const baseline = createPlannerState(csvBaseline)
-
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (!stored) {
-      return baseline
-    }
-
-    const parsed = JSON.parse(stored) as PlannerState
-    if (!Array.isArray(parsed.pokemon)) {
-      return baseline
-    }
-
-    return parsed
-  } catch {
-    return baseline
-  }
-}
+const CHANNEL_PREFIX = 'pokopia-coop-sync:'
 
 function App() {
-  const [state, setState] = useState<PlannerState>(() => loadState())
+  const [sessionId] = useState(resolveSessionId)
+  const [sessionPlan, setSessionPlan] = useState<SessionPlanRecord>({
+    sessionId,
+    updatedAt: 0,
+    overrides: {},
+  })
   const [searchTerm, setSearchTerm] = useState('')
   const [ownerFilter, setOwnerFilter] = useState<'All' | Owner>('All')
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  }, [state])
+  const baselinePokemon = useMemo(() => parsePokemonCsv(csvBaseline), [])
 
   useEffect(() => {
-    const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(CHANNEL_NAME) : null
+    let isActive = true
 
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key !== STORAGE_KEY || !event.newValue) {
-        return
-      }
+    void loadSessionPlan(sessionId)
+      .then((stored) => {
+        if (!isActive || !stored) {
+          return
+        }
 
-      try {
-        const next = JSON.parse(event.newValue) as PlannerState
-        setState((current) => (next.updatedAt > current.updatedAt ? next : current))
-      } catch {
-        // ignore invalid synced payloads
-      }
+        setSessionPlan((current) => (stored.updatedAt > current.updatedAt ? stored : current))
+      })
+      .catch(() => {
+        // ignore db read errors and continue with baseline
+      })
+
+    return () => {
+      isActive = false
     }
+  }, [sessionId])
 
-    const handleMessage = (event: MessageEvent<PlannerState>) => {
+  useEffect(() => {
+    const channelName = `${CHANNEL_PREFIX}${sessionId}`
+    const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(channelName) : null
+
+    const handleMessage = (event: MessageEvent<SessionPlanRecord>) => {
       const next = event.data
       if (next?.updatedAt) {
-        setState((current) => (next.updatedAt > current.updatedAt ? next : current))
+        setSessionPlan((current) => (next.updatedAt > current.updatedAt ? next : current))
       }
     }
 
-    window.addEventListener('storage', handleStorage)
     channel?.addEventListener('message', handleMessage)
 
     return () => {
-      window.removeEventListener('storage', handleStorage)
       channel?.removeEventListener('message', handleMessage)
       channel?.close()
     }
-  }, [])
+  }, [sessionId])
+
+  const plannedPokemon = useMemo(
+    () => applySessionOverrides(baselinePokemon, sessionPlan.overrides),
+    [baselinePokemon, sessionPlan.overrides],
+  )
 
   const visiblePokemon = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
 
-    return state.pokemon.filter((pokemon) => {
+    return plannedPokemon.filter((pokemon) => {
       const ownerMatch = ownerFilter === 'All' || pokemon.owner === ownerFilter
       const searchMatch =
         normalizedSearch.length === 0 ||
@@ -86,21 +82,29 @@ function App() {
 
       return ownerMatch && searchMatch
     })
-  }, [ownerFilter, searchTerm, state.pokemon])
+  }, [ownerFilter, plannedPokemon, searchTerm])
 
   const movedCount = useMemo(
-    () => state.pokemon.filter((pokemon) => pokemon.moved).length,
-    [state.pokemon],
+    () => plannedPokemon.filter((pokemon) => pokemon.moved).length,
+    [plannedPokemon],
   )
 
-  const syncUpdate = (pokemonNumber: string, update: PlanUpdate) => {
-    setState((current) => {
-      const next = updatePlannerState(current, pokemonNumber, update)
+  const persistUpdate = (pokemonId: string, update: PlanUpdate) => {
+    setSessionPlan((current) => {
+      const next: SessionPlanRecord = {
+        sessionId,
+        updatedAt: current.updatedAt + 1,
+        overrides: upsertOverride(current.overrides, pokemonId, update),
+      }
+
+      void saveSessionPlan(next)
+
       if (typeof BroadcastChannel !== 'undefined') {
-        const channel = new BroadcastChannel(CHANNEL_NAME)
+        const channel = new BroadcastChannel(`${CHANNEL_PREFIX}${sessionId}`)
         channel.postMessage(next)
         channel.close()
       }
+
       return next
     })
   }
@@ -109,13 +113,16 @@ function App() {
     <main className="app">
       <header className="header">
         <h1>Pokopia Cooperative Planner</h1>
-        <p>Plan assignments collaboratively from the shared CSV baseline with live sync across open sessions.</p>
+        <p>CSV defines the Pokémon baseline. Session DB stores only owner + moved planning decisions per group.</p>
+        <p>
+          Session: <code>{sessionId}</code>
+        </p>
       </header>
 
       <section className="stats" aria-label="Planner summary">
-        <span>Total Pokémon: {state.pokemon.length}</span>
+        <span>Total Pokémon: {plannedPokemon.length}</span>
         <span>Moved: {movedCount}</span>
-        <span>Pending: {state.pokemon.length - movedCount}</span>
+        <span>Pending: {plannedPokemon.length - movedCount}</span>
       </section>
 
       <section className="controls" aria-label="Filters">
@@ -156,8 +163,8 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {visiblePokemon.map((pokemon, index) => (
-              <tr key={`${pokemon.number}-${pokemon.name}-${index}`}>
+            {visiblePokemon.map((pokemon) => (
+              <tr key={pokemon.id}>
                 <td>{pokemon.number}</td>
                 <td>{pokemon.name}</td>
                 <td>
@@ -165,7 +172,7 @@ function App() {
                     aria-label={`Owner for ${pokemon.name}`}
                     value={pokemon.owner}
                     onChange={(event) =>
-                      syncUpdate(pokemon.number, { owner: event.target.value as Owner })
+                      persistUpdate(pokemon.id, { owner: event.target.value as Owner })
                     }
                   >
                     <option value="Thomas">Thomas</option>
@@ -179,7 +186,7 @@ function App() {
                     type="checkbox"
                     checked={pokemon.moved}
                     onChange={(event) =>
-                      syncUpdate(pokemon.number, { moved: event.target.checked })
+                      persistUpdate(pokemon.id, { moved: event.target.checked })
                     }
                   />
                 </td>
