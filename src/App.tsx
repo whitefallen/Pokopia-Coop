@@ -291,7 +291,9 @@ function App() {
         <p className="step-label">Step 3</p>
         <h2>Planner workspace</h2>
         {!canPlan ? (
-          <p className="planner-locked">Complete Step 2 to start planning in this session.</p>
+          <div className="planner-locked" role="status" aria-live="polite">
+            Complete Step 2 to start planning in this session.
+          </div>
         ) : (
           <>
             <section className="stats" aria-label="Planner summary">
