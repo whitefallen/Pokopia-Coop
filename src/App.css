@@ -28,16 +28,49 @@ body {
   color: #475569;
 }
 
+.step-card {
+  margin-top: 16px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.step-label {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.step-card h2 {
+  margin: 6px 0 0;
+  font-size: 1.25rem;
+}
+
 .session-actions {
   margin-top: 12px;
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.session-actions input {
+  min-width: min(100%, 420px);
+  width: 100%;
+  max-width: 520px;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
 }
 
 .session-actions button,
 .player-controls button,
-.existing-player-choice button {
+.existing-player-choice button,
+.known-players button {
   border: 1px solid #cbd5e1;
   background: #fff;
   border-radius: 6px;
@@ -47,11 +80,7 @@ body {
 }
 
 .player-prompt {
-  margin-top: 16px;
-  padding: 14px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  margin-top: 8px;
 }
 
 .player-prompt h2 {
@@ -73,6 +102,19 @@ body {
   border-radius: 6px;
 }
 
+.known-players {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.known-players span {
+  color: #334155;
+  font-size: 0.95rem;
+}
+
 .existing-player-choice {
   margin-top: 12px;
   display: flex;
@@ -86,8 +128,13 @@ body {
   color: #334155;
 }
 
+.planner-locked {
+  margin-top: 10px;
+  color: #64748b;
+}
+
 .stats {
-  margin-top: 16px;
+  margin-top: 10px;
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
@@ -118,7 +165,7 @@ td select {
 }
 
 .table-wrap {
-  margin-top: 20px;
+  margin-top: 14px;
   overflow: auto;
   background: #fff;
   border: 1px solid #e2e8f0;

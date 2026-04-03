@@ -83,6 +83,7 @@ function App() {
     [knownPlayers],
   )
   const showPlayerPrompt = playerName.length === 0
+  const canPlan = !showPlayerPrompt
 
   useEffect(() => {
     let isActive = true
@@ -203,7 +204,12 @@ function App() {
     <main className="app">
       <header className="header">
         <h1>Pokopia Cooperative Planner</h1>
-        <p>CSV defines the Pokémon baseline. Session DB stores only owner + moved planning decisions per group.</p>
+        <p>Plan flow: create/share session → choose player identity → assign and track moved Pokémon.</p>
+      </header>
+
+      <section className="step-card" aria-label="Step 1 session setup">
+        <p className="step-label">Step 1</p>
+        <h2>Session setup</h2>
         <p>
           Session: <code>{sessionId}</code>
         </p>
@@ -214,130 +220,158 @@ function App() {
           <button type="button" onClick={() => void copyShareLink()}>
             {copiedShareLink ? 'Copied' : 'Copy share link'}
           </button>
+          <input aria-label="Share link" readOnly value={shareLink} />
         </div>
-      </header>
-
-      {showPlayerPrompt ? (
-        <section className="player-prompt" aria-label="Join session">
-          <h2>Join this session</h2>
-          <p>Enter your player name so assignments can be tracked by session + player.</p>
-          <div className="player-controls">
-            <input
-              aria-label="Player name"
-              value={playerInput}
-              onChange={(event) => setPlayerInput(event.target.value)}
-              placeholder="Your name"
-            />
-            <button type="button" onClick={() => handlePlayerNameSubmit(playerInput)}>
-              Continue
-            </button>
-          </div>
-          {pendingExistingPlayer ? (
-            <div className="existing-player-choice">
-              <p>
-                "{pendingExistingPlayer}" already exists in this session. Join that player or use a new
-                name.
-              </p>
-              <button
-                type="button"
-                onClick={() =>
-                  handlePlayerNameSubmit(pendingExistingPlayer, { skipCollisionCheck: true })
-                }
-              >
-                Join as {pendingExistingPlayer}
-              </button>
-              <button type="button" onClick={() => setPendingExistingPlayer('')}>
-                Use a new name
-              </button>
-            </div>
-          ) : null}
-        </section>
-      ) : (
-        <p className="player-active">
-          You are planning as <code>{playerName}</code>.
-        </p>
-      )}
-
-      <section className="stats" aria-label="Planner summary">
-        <span>Total Pokémon: {plannedPokemon.length}</span>
-        <span>Moved: {movedCount}</span>
-        <span>Pending: {plannedPokemon.length - movedCount}</span>
       </section>
 
-      <section className="controls" aria-label="Filters">
-        <label>
-          Search
-          <input
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Name or number"
-          />
-        </label>
-
-        <label>
-          Owner
-            <select
-              aria-label="Owner filter"
-              value={ownerFilter}
-              onChange={(event) => setOwnerFilter(event.target.value)}
-            >
-              <option value="All">All</option>
-              {ownerOptions.map((owner) => (
-                <option key={owner} value={owner}>
-                  {owner}
-                </option>
-              ))}
-            </select>
-          </label>
-        </section>
-
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>Owner</th>
-              <th>Moved</th>
-              <th>Specialties</th>
-              <th>Habitat</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visiblePokemon.map((pokemon) => (
-              <tr key={pokemon.id}>
-                <td>{pokemon.number}</td>
-                <td>{pokemon.name}</td>
-                <td>
-                  <select
-                    aria-label={`Owner for ${pokemon.name}`}
-                    value={pokemon.owner}
-                    onChange={(event) => persistUpdate(pokemon.id, { owner: event.target.value })}
+      <section className="step-card" aria-label="Step 2 player identity">
+        <p className="step-label">Step 2</p>
+        <h2>Player identity</h2>
+        {showPlayerPrompt ? (
+          <section className="player-prompt" aria-label="Join session">
+            <p>Enter your player name so assignments can be tracked by session + player.</p>
+            <div className="player-controls">
+              <input
+                aria-label="Player name"
+                value={playerInput}
+                onChange={(event) => setPlayerInput(event.target.value)}
+                placeholder="Your name"
+              />
+              <button type="button" onClick={() => handlePlayerNameSubmit(playerInput)}>
+                Continue
+              </button>
+            </div>
+            {knownPlayers.length > 0 ? (
+              <div className="known-players">
+                <span>Known players in this session:</span>
+                {knownPlayers.map((knownPlayer) => (
+                  <button
+                    key={knownPlayer}
+                    type="button"
+                    onClick={() => handlePlayerNameSubmit(knownPlayer, { skipCollisionCheck: true })}
                   >
-                    {ownerOptions.map((owner) => (
-                      <option key={`${pokemon.id}-${owner}`} value={owner}>
-                        {owner}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  <input
-                    aria-label={`Moved status for ${pokemon.name}`}
-                    type="checkbox"
-                    checked={pokemon.moved}
-                    onChange={(event) =>
-                      persistUpdate(pokemon.id, { moved: event.target.checked })
-                    }
-                  />
-                </td>
-                <td>{pokemon.specialties.join(', ') || '—'}</td>
-                <td>{pokemon.idealHabitat || '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    {knownPlayer}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {pendingExistingPlayer ? (
+              <div className="existing-player-choice">
+                <p>
+                  "{pendingExistingPlayer}" already exists in this session. Join that player or use a new
+                  name.
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handlePlayerNameSubmit(pendingExistingPlayer, { skipCollisionCheck: true })
+                  }
+                >
+                  Join as {pendingExistingPlayer}
+                </button>
+                <button type="button" onClick={() => setPendingExistingPlayer('')}>
+                  Use a new name
+                </button>
+              </div>
+            ) : null}
+          </section>
+        ) : (
+          <p className="player-active">
+            You are planning as <code>{playerName}</code>.
+          </p>
+        )}
+      </section>
+
+      <section className="step-card" aria-label="Step 3 planner workspace">
+        <p className="step-label">Step 3</p>
+        <h2>Planner workspace</h2>
+        {!canPlan ? (
+          <p className="planner-locked">Complete Step 2 to start planning in this session.</p>
+        ) : (
+          <>
+            <section className="stats" aria-label="Planner summary">
+              <span>Total Pokémon: {plannedPokemon.length}</span>
+              <span>Moved: {movedCount}</span>
+              <span>Pending: {plannedPokemon.length - movedCount}</span>
+            </section>
+
+            <section className="controls" aria-label="Filters">
+              <label>
+                Search
+                <input
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Name or number"
+                />
+              </label>
+
+              <label>
+                Owner
+                <select
+                  aria-label="Owner filter"
+                  value={ownerFilter}
+                  onChange={(event) => setOwnerFilter(event.target.value)}
+                >
+                  <option value="All">All</option>
+                  {ownerOptions.map((owner) => (
+                    <option key={owner} value={owner}>
+                      {owner}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </section>
+
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Owner</th>
+                    <th>Moved</th>
+                    <th>Specialties</th>
+                    <th>Habitat</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visiblePokemon.map((pokemon) => (
+                    <tr key={pokemon.id}>
+                      <td>{pokemon.number}</td>
+                      <td>{pokemon.name}</td>
+                      <td>
+                        <select
+                          aria-label={`Owner for ${pokemon.name}`}
+                          value={pokemon.owner}
+                          onChange={(event) => persistUpdate(pokemon.id, { owner: event.target.value })}
+                        >
+                          {ownerOptions.map((owner) => (
+                            <option key={`${pokemon.id}-${owner}`} value={owner}>
+                              {owner}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          aria-label={`Moved status for ${pokemon.name}`}
+                          type="checkbox"
+                          checked={pokemon.moved}
+                          onChange={(event) =>
+                            persistUpdate(pokemon.id, { moved: event.target.checked })
+                          }
+                        />
+                      </td>
+                      <td>{pokemon.specialties.join(', ') || '—'}</td>
+                      <td>{pokemon.idealHabitat || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </section>
     </main>
   )
 }

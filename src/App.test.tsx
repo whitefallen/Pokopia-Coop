@@ -47,6 +47,10 @@ describe('App', () => {
 
     render(<App />)
 
+    expect(screen.getByRole('heading', { name: 'Session setup' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Player identity' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Planner workspace' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Share link')).toBeInTheDocument()
     expect(screen.getByText(/Session:/i)).toBeInTheDocument()
     expect(screen.getByText('group-a')).toBeInTheDocument()
     expect(screen.getByText(/You are planning as/i)).toBeInTheDocument()
@@ -86,7 +90,7 @@ describe('App', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Join this session' })).toBeInTheDocument()
+    expect(screen.getByText(/Complete Step 2 to start planning in this session\./i)).toBeInTheDocument()
     await user.type(screen.getByLabelText('Player name'), '  Misty  ')
     await user.click(screen.getByRole('button', { name: 'Continue' }))
 
@@ -99,5 +103,6 @@ describe('App', () => {
     expect(setPlayerName).toHaveBeenCalledWith('group-a', 'Misty')
     expect(screen.getByText(/You are planning as/i)).toBeInTheDocument()
     expect(screen.getByText('Misty', { selector: 'code' })).toBeInTheDocument()
+    expect(screen.queryByText(/Complete Step 2 to start planning in this session\./i)).not.toBeInTheDocument()
   })
 })
