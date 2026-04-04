@@ -531,9 +531,9 @@ function App() {
         )}
       </section>
 
-      <section className="step-card" aria-label="Step 4 player grouping workspace">
+      <section className="step-card" aria-labelledby="step-4-heading">
         <p className="step-label">Step 4</p>
-        <h2>My assigned Pokémon groups</h2>
+        <h2 id="step-4-heading">My assigned Pokémon groups</h2>
         {!canPlan ? (
           <div className="planner-locked" role="status" aria-live="polite">
             Complete Step 2 to manage your groups.
@@ -581,7 +581,7 @@ function App() {
                       {playerGroups.map((group) => (
                         <option key={`assign-${pokemon.id}-${group.id}`} value={group.id}>
                           {group.parentGroupId
-                            ? `Parent: ${playerGroupNameById.get(group.parentGroupId) ?? 'Unknown parent'} • ${group.name}`
+                            ? `Parent: ${playerGroupNameById.get(group.parentGroupId) ?? 'Unknown parent'} - ${group.name}`
                             : group.name}
                         </option>
                       ))}
