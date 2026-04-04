@@ -41,7 +41,7 @@ const isSameOverrideRecord = (
   for (const key of leftKeys) {
     const leftValue = left[key]
     const rightValue = right[key]
-    if (!rightValue) {
+    if (!(key in right) || !rightValue) {
       return false
     }
     if (leftValue.owner !== rightValue.owner || leftValue.moved !== rightValue.moved) {
@@ -64,7 +64,7 @@ const isSameGroupRecord = (
   for (const key of leftKeys) {
     const leftValue = left[key]
     const rightValue = right[key]
-    if (!rightValue) {
+    if (!(key in right) || !rightValue) {
       return false
     }
     if (

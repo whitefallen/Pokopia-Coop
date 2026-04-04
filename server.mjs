@@ -1,11 +1,13 @@
 import { createReadStream, existsSync } from 'node:fs'
-import { extname, join, normalize, resolve } from 'node:path'
+import { extname, join, normalize, resolve, sep } from 'node:path'
 import { createServer } from 'node:http'
 import { WebSocket, WebSocketServer } from 'ws'
 
 const HOST = process.env.HOST ?? '0.0.0.0'
 const PORT = Number(process.env.PORT ?? 4173)
 const DIST_DIR = join(process.cwd(), 'dist')
+const RESOLVED_DIST_DIR = resolve(DIST_DIR)
+const DIST_PREFIX = `${RESOLVED_DIST_DIR}${sep}`
 const INDEX_PATH = join(DIST_DIR, 'index.html')
 
 const MIME_TYPES = {
@@ -31,8 +33,7 @@ function safePath(pathname) {
   const decoded = decodeURIComponent(pathname)
   const normalizedPath = normalize(decoded).replace(/^[/\\]+/, '')
   const resolved = resolve(DIST_DIR, normalizedPath)
-  const distPrefix = `${DIST_DIR}/`
-  if (resolved !== DIST_DIR && !resolved.startsWith(distPrefix)) {
+  if (resolved !== RESOLVED_DIST_DIR && !resolved.startsWith(DIST_PREFIX)) {
     return DIST_DIR
   }
   return resolved
@@ -57,7 +58,7 @@ const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
   const pathname = url.pathname === '/' ? '/index.html' : url.pathname
   const path = safePath(pathname)
-  const shouldFallbackToSpa = !pathname.startsWith('/assets/') && extname(pathname) === ''
+  const shouldFallbackToSpa = extname(pathname) === ''
   serveFile(res, path, shouldFallbackToSpa)
 })
 
@@ -109,6 +110,7 @@ server.on('upgrade', (req, socket, head) => {
   }
 
   wss.handleUpgrade(req, socket, head, (ws) => {
+    // Pass sessionId as a third arg to keep per-session relay grouping in one listener.
     wss.emit('connection', ws, req, sessionId)
   })
 })
