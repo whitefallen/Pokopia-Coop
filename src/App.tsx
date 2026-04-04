@@ -581,7 +581,7 @@ function App() {
                       {playerGroups.map((group) => (
                         <option key={`assign-${pokemon.id}-${group.id}`} value={group.id}>
                           {group.parentGroupId
-                            ? `Parent: ${playerGroupNameById.get(group.parentGroupId) ?? 'group'} • ${group.name}`
+                            ? `Parent: ${playerGroupNameById.get(group.parentGroupId) ?? 'Unknown parent'} • ${group.name}`
                             : group.name}
                         </option>
                       ))}

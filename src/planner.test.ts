@@ -116,6 +116,7 @@ describe('planner csv parsing', () => {
     expect(ownerPart).toHaveLength(16)
     expect(ownerPart).toBe('ash-ketchum-the-')
     expect(namePart).toBe('bright-biome-living-zone')
+    // 35 in base-36 is "z"
     expect(timestampPart).toBe('z')
   })
 
