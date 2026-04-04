@@ -16,10 +16,19 @@ export interface PlanUpdate {
   moved?: boolean
 }
 
+export interface PlayerGroup {
+  id: string
+  owner: Owner
+  name: string
+  parentGroupId: string | null
+}
+
 export interface SessionPlanRecord {
   sessionId: string
   updatedAt: number
   overrides: Record<string, PlanUpdate>
+  groups: Record<string, PlayerGroup>
+  pokemonGroupAssignments: Record<string, string>
 }
 
 function createPokemonId(number: string, name: string): string {
@@ -122,9 +131,35 @@ export function createNextSessionPlanRecord(
   update: PlanUpdate,
   now = Date.now(),
 ): SessionPlanRecord {
+  const nextUpdatedAt = now > current.updatedAt ? now : current.updatedAt + 1
+
   return {
     sessionId: current.sessionId,
-    updatedAt: now > current.updatedAt ? now : current.updatedAt + 1,
+    updatedAt: nextUpdatedAt,
     overrides: upsertOverride(current.overrides, pokemonId, update),
+    groups: current.groups,
+    pokemonGroupAssignments: current.pokemonGroupAssignments,
+  }
+}
+
+export function createGroupId(owner: string, groupName: string, now = Date.now()): string {
+  const ownerPart = owner.trim().toLowerCase().replace(/\s+/g, '-').slice(0, 16) || 'player'
+  const namePart = groupName.trim().toLowerCase().replace(/\s+/g, '-').slice(0, 24) || 'group'
+  return `${ownerPart}:${namePart}:${now.toString(36)}`
+}
+
+export function createNextSessionGroupRecord(
+  current: SessionPlanRecord,
+  update: Pick<SessionPlanRecord, 'groups' | 'pokemonGroupAssignments'>,
+  now = Date.now(),
+): SessionPlanRecord {
+  const nextUpdatedAt = now > current.updatedAt ? now : current.updatedAt + 1
+
+  return {
+    sessionId: current.sessionId,
+    updatedAt: nextUpdatedAt,
+    overrides: current.overrides,
+    groups: update.groups,
+    pokemonGroupAssignments: update.pokemonGroupAssignments,
   }
 }

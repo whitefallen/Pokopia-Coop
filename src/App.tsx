@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import csvBaseline from '../pokopia_assignment - Sheet1.csv?raw'
 import {
   applySessionOverrides,
+  createGroupId,
+  createNextSessionGroupRecord,
   createNextSessionPlanRecord,
   parsePokemonCsv,
+  type PlayerGroup,
   type PlanUpdate,
   type SessionPlanRecord,
 } from './planner'
@@ -29,9 +32,20 @@ function App() {
     sessionId,
     updatedAt: 0,
     overrides: {},
+    groups: {},
+    pokemonGroupAssignments: {},
   })
   const [searchTerm, setSearchTerm] = useState('')
   const [ownerFilter, setOwnerFilter] = useState('All')
+  const [newGroupName, setNewGroupName] = useState('')
+  const [newGroupParent, setNewGroupParent] = useState('')
+  const normalizeSessionPlanRecord = (record: SessionPlanRecord): SessionPlanRecord => ({
+    sessionId: record.sessionId,
+    updatedAt: record.updatedAt,
+    overrides: record.overrides ?? {},
+    groups: record.groups ?? {},
+    pokemonGroupAssignments: record.pokemonGroupAssignments ?? {},
+  })
 
   const baselinePokemon = useMemo(() => parsePokemonCsv(csvBaseline), [])
   const shareLink = useMemo(() => {
@@ -94,7 +108,8 @@ function App() {
           return
         }
 
-        setSessionPlan((current) => (stored.updatedAt > current.updatedAt ? stored : current))
+        const normalized = normalizeSessionPlanRecord(stored)
+        setSessionPlan((current) => (normalized.updatedAt > current.updatedAt ? normalized : current))
       })
       .catch(() => {
         // ignore db read errors and continue with baseline
@@ -110,7 +125,10 @@ function App() {
     const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(channelName) : null
 
     const handleMessage = (event: MessageEvent<SessionPlanRecord>) => {
-      const next = event.data
+      if (!event.data) {
+        return
+      }
+      const next = normalizeSessionPlanRecord(event.data)
       if (next?.updatedAt) {
         setSessionPlan((current) => (next.updatedAt > current.updatedAt ? next : current))
       }
@@ -142,10 +160,55 @@ function App() {
     () => plannedPokemon.filter((pokemon) => pokemon.moved).length,
     [plannedPokemon],
   )
+  const assignedToCurrentPlayer = useMemo(
+    () => plannedPokemon.filter((pokemon) => pokemon.owner === playerName),
+    [plannedPokemon, playerName],
+  )
+  const playerGroups = useMemo(
+    () =>
+      Object.values(sessionPlan.groups).filter(
+        (group): group is PlayerGroup => group.owner === playerName,
+      ),
+    [playerName, sessionPlan.groups],
+  )
+  const groupedPokemonByGroup = useMemo(() => {
+    const grouped = new Map<string, typeof assignedToCurrentPlayer>()
+    for (const pokemon of assignedToCurrentPlayer) {
+      const groupId = sessionPlan.pokemonGroupAssignments[pokemon.id]
+      if (!groupId) {
+        continue
+      }
+      const existing = grouped.get(groupId) ?? []
+      existing.push(pokemon)
+      grouped.set(groupId, existing)
+    }
+    return grouped
+  }, [assignedToCurrentPlayer, sessionPlan.pokemonGroupAssignments])
+  const ungroupedAssignedPokemon = useMemo(
+    () =>
+      assignedToCurrentPlayer.filter((pokemon) => !sessionPlan.pokemonGroupAssignments[pokemon.id]),
+    [assignedToCurrentPlayer, sessionPlan.pokemonGroupAssignments],
+  )
 
   const persistUpdate = (pokemonId: string, update: PlanUpdate) => {
     setSessionPlan((current) => {
       const next = createNextSessionPlanRecord(current, pokemonId, update)
+      void saveSessionPlan(next)
+
+      if (typeof BroadcastChannel !== 'undefined') {
+        const channel = new BroadcastChannel(`${CHANNEL_PREFIX}${sessionId}`)
+        channel.postMessage(next)
+        channel.close()
+      }
+
+      return next
+    })
+  }
+  const persistGroupUpdate = (
+    update: Pick<SessionPlanRecord, 'groups' | 'pokemonGroupAssignments'>,
+  ) => {
+    setSessionPlan((current) => {
+      const next = createNextSessionGroupRecord(current, update)
       void saveSessionPlan(next)
 
       if (typeof BroadcastChannel !== 'undefined') {
@@ -198,6 +261,55 @@ function App() {
     await navigator.clipboard.writeText(shareLink)
     setCopiedShareLink(true)
     window.setTimeout(() => setCopiedShareLink(false), 1200)
+  }
+  const createPlayerGroup = () => {
+    const groupName = newGroupName.trim()
+    if (!groupName || !playerName) {
+      return
+    }
+    const groupId = createGroupId(playerName, groupName)
+    persistGroupUpdate({
+      groups: {
+        ...sessionPlan.groups,
+        [groupId]: {
+          id: groupId,
+          owner: playerName,
+          name: groupName,
+          parentGroupId: newGroupParent || null,
+        },
+      },
+      pokemonGroupAssignments: sessionPlan.pokemonGroupAssignments,
+    })
+    setNewGroupName('')
+    setNewGroupParent('')
+  }
+  const assignPokemonToGroup = (pokemonId: string, groupId: string) => {
+    persistGroupUpdate({
+      groups: sessionPlan.groups,
+      pokemonGroupAssignments: groupId
+        ? { ...sessionPlan.pokemonGroupAssignments, [pokemonId]: groupId }
+        : Object.fromEntries(
+            Object.entries(sessionPlan.pokemonGroupAssignments).filter(([id]) => id !== pokemonId),
+          ),
+    })
+  }
+  const renderGroupBranch = (group: PlayerGroup) => {
+    const children = playerGroups.filter((entry) => entry.parentGroupId === group.id)
+    const pokemonInGroup = groupedPokemonByGroup.get(group.id) ?? []
+
+    return (
+      <li key={group.id}>
+        <strong>{group.name}</strong> <span>({pokemonInGroup.length})</span>
+        {pokemonInGroup.length ? (
+          <ul>
+            {pokemonInGroup.map((pokemon) => (
+              <li key={`${group.id}-${pokemon.id}`}>{pokemon.name}</li>
+            ))}
+          </ul>
+        ) : null}
+        {children.length ? <ul>{children.map((childGroup) => renderGroupBranch(childGroup))}</ul> : null}
+      </li>
+    )
   }
 
   return (
@@ -375,6 +487,90 @@ function App() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </>
+        )}
+      </section>
+
+      <section className="step-card" aria-label="Step 4 player grouping workspace">
+        <p className="step-label">Step 4</p>
+        <h2>My assigned Pokémon groups</h2>
+        {!canPlan ? (
+          <div className="planner-locked" role="status" aria-live="polite">
+            Complete Step 2 to manage your groups.
+          </div>
+        ) : (
+          <>
+            <p>
+              Assigned to <code>{playerName}</code>: {assignedToCurrentPlayer.length}
+            </p>
+            <div className="group-create">
+              <input
+                aria-label="New group name"
+                value={newGroupName}
+                onChange={(event) => setNewGroupName(event.target.value)}
+                placeholder="Create group (e.g. Bright biome)"
+              />
+              <select
+                aria-label="Parent group"
+                value={newGroupParent}
+                onChange={(event) => setNewGroupParent(event.target.value)}
+              >
+                <option value="">No parent</option>
+                {playerGroups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+              <button type="button" onClick={createPlayerGroup}>
+                Create group
+              </button>
+            </div>
+            {assignedToCurrentPlayer.length > 0 ? (
+              <div className="group-assignment-list">
+                <h3>Assign my Pokémon to groups</h3>
+                {assignedToCurrentPlayer.map((pokemon) => (
+                  <label key={`grouping-${pokemon.id}`} className="group-assignment-item">
+                    <span>{pokemon.name}</span>
+                    <select
+                      aria-label={`Group for ${pokemon.name}`}
+                      value={sessionPlan.pokemonGroupAssignments[pokemon.id] ?? ''}
+                      onChange={(event) => assignPokemonToGroup(pokemon.id, event.target.value)}
+                    >
+                      <option value="">Ungrouped</option>
+                      {playerGroups.map((group) => (
+                        <option key={`assign-${pokemon.id}-${group.id}`} value={group.id}>
+                          {group.parentGroupId ? '↳ ' : ''}
+                          {group.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            ) : null}
+            <div className="group-tree">
+              <h3>Grouped view</h3>
+              {playerGroups.length === 0 ? (
+                <p>No groups yet.</p>
+              ) : (
+                <ul>
+                  {playerGroups
+                    .filter((group) => !group.parentGroupId)
+                    .map((rootGroup) => renderGroupBranch(rootGroup))}
+                </ul>
+              )}
+              {ungroupedAssignedPokemon.length > 0 ? (
+                <>
+                  <h4>Ungrouped</h4>
+                  <ul>
+                    {ungroupedAssignedPokemon.map((pokemon) => (
+                      <li key={`ungrouped-${pokemon.id}`}>{pokemon.name}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
             </div>
           </>
         )}

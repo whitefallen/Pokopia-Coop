@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -43,6 +43,8 @@ describe('App', () => {
       overrides: {
         '#001|Bulbasaur': { owner: 'Shared' },
       },
+      groups: {},
+      pokemonGroupAssignments: {},
     })
 
     render(<App />)
@@ -54,7 +56,9 @@ describe('App', () => {
     expect(screen.getByText(/Session:/i)).toBeInTheDocument()
     expect(screen.getByText('group-a')).toBeInTheDocument()
     expect(screen.getByText(/You are planning as/i)).toBeInTheDocument()
-    expect(screen.getByText('Ash', { selector: 'code' })).toBeInTheDocument()
+    expect(
+      within(screen.getByLabelText('Step 2 player identity')).getByText('Ash', { selector: 'code' }),
+    ).toBeInTheDocument()
 
     await waitFor(() => {
       expect(screen.getByLabelText('Owner for Bulbasaur')).toHaveValue('Shared')
@@ -86,6 +90,8 @@ describe('App', () => {
       overrides: {
         '#001|Bulbasaur': { owner: 'Misty' },
       },
+      groups: {},
+      pokemonGroupAssignments: {},
     })
 
     render(<App />)
@@ -102,7 +108,46 @@ describe('App', () => {
     expect(normalizePlayerName).toHaveBeenCalledWith('  Misty  ')
     expect(setPlayerName).toHaveBeenCalledWith('group-a', 'Misty')
     expect(screen.getByText(/You are planning as/i)).toBeInTheDocument()
-    expect(screen.getByText('Misty', { selector: 'code' })).toBeInTheDocument()
+    expect(
+      within(screen.getByLabelText('Step 2 player identity')).getByText('Misty', {
+        selector: 'code',
+      }),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/Complete Step 2 to start planning in this session\./i)).not.toBeInTheDocument()
+  })
+
+  it('shows assigned list and allows creating nested player groups', async () => {
+    const user = userEvent.setup()
+    vi.mocked(resolvePlayerName).mockReturnValue('Ash')
+
+    vi.mocked(loadSessionPlan).mockResolvedValueOnce({
+      sessionId: 'group-a',
+      updatedAt: 20,
+      overrides: {
+        '#001|Bulbasaur': { owner: 'Ash' },
+      },
+      groups: {},
+      pokemonGroupAssignments: {},
+    })
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByText((_, element) =>
+          element?.textContent?.replace(/\s+/g, ' ').trim() === 'Assigned to Ash: 1',
+        ),
+      ).toBeInTheDocument()
+    })
+
+    await user.type(screen.getByLabelText('New group name'), 'Bright biome')
+    await user.click(screen.getByRole('button', { name: 'Create group' }))
+
+    expect(saveSessionPlan).toHaveBeenCalled()
+    expect(screen.getAllByText('Bright biome').length).toBeGreaterThan(0)
+
+    const bulbasaurGroupSelect = screen.getByLabelText('Group for Bulbasaur') as HTMLSelectElement
+    await user.selectOptions(bulbasaurGroupSelect, bulbasaurGroupSelect.options[1])
+    expect(saveSessionPlan).toHaveBeenCalled()
   })
 })

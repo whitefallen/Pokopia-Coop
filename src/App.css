@@ -70,7 +70,8 @@ body {
 .session-actions button,
 .player-controls button,
 .existing-player-choice button,
-.known-players button {
+.known-players button,
+.group-create button {
   border: 1px solid #cbd5e1;
   background: #fff;
   border-radius: 6px;
@@ -131,6 +132,50 @@ body {
 .planner-locked {
   margin-top: 10px;
   color: #64748b;
+}
+
+.group-create {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.group-create input,
+.group-create select,
+.group-assignment-item select {
+  min-width: 180px;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.group-assignment-list {
+  margin-top: 14px;
+}
+
+.group-assignment-list h3,
+.group-tree h3,
+.group-tree h4 {
+  margin: 10px 0 6px;
+}
+
+.group-assignment-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.group-assignment-item span {
+  min-width: 120px;
+  color: #334155;
+}
+
+.group-tree {
+  margin-top: 12px;
 }
 
 .stats {

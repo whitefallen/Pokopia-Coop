@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   applySessionOverrides,
+  createNextSessionGroupRecord,
   createNextSessionPlanRecord,
   parsePokemonCsv,
   upsertOverride,
@@ -54,6 +55,8 @@ describe('planner csv parsing', () => {
       sessionId: 'group-a',
       updatedAt: 500,
       overrides: {},
+      groups: {},
+      pokemonGroupAssignments: {},
     }
 
     const next = createNextSessionPlanRecord(current, '#001|Bulbasaur', { moved: true }, 400)
@@ -66,5 +69,40 @@ describe('planner csv parsing', () => {
 
     expect(next.updatedAt).toBe(501)
     expect(nextWithFutureTime.updatedAt).toBe(800)
+  })
+
+  it('creates group record updates while preserving plan overrides', () => {
+    const current = {
+      sessionId: 'group-a',
+      updatedAt: 20,
+      overrides: {
+        '#001|Bulbasaur': { owner: 'Ash', moved: true },
+      },
+      groups: {},
+      pokemonGroupAssignments: {},
+    }
+
+    const next = createNextSessionGroupRecord(
+      current,
+      {
+        groups: {
+          'ash:bright:m1': {
+            id: 'ash:bright:m1',
+            owner: 'Ash',
+            name: 'Bright',
+            parentGroupId: null,
+          },
+        },
+        pokemonGroupAssignments: {
+          '#001|Bulbasaur': 'ash:bright:m1',
+        },
+      },
+      25,
+    )
+
+    expect(next.updatedAt).toBe(25)
+    expect(next.overrides).toEqual(current.overrides)
+    expect(next.groups['ash:bright:m1']?.name).toBe('Bright')
+    expect(next.pokemonGroupAssignments['#001|Bulbasaur']).toBe('ash:bright:m1')
   })
 })
