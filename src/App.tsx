@@ -28,6 +28,11 @@ const normalizeSessionPlanRecord = (record: SessionPlanRecord): SessionPlanRecor
   groups: record.groups ?? {},
   pokemonGroupAssignments: record.pokemonGroupAssignments ?? {},
 })
+const removePokemonGroupAssignment = (
+  assignments: Record<string, string>,
+  pokemonId: string,
+): Record<string, string> =>
+  Object.fromEntries(Object.entries(assignments).filter(([id]) => id !== pokemonId))
 const renderGroupBranch = (
   group: PlayerGroup,
   groupChildrenByParent: Map<string, PlayerGroup[]>,
@@ -343,9 +348,7 @@ function App() {
       groups: sessionPlan.groups,
       pokemonGroupAssignments: groupId
         ? { ...sessionPlan.pokemonGroupAssignments, [pokemonId]: groupId }
-        : Object.fromEntries(
-            Object.entries(sessionPlan.pokemonGroupAssignments).filter(([id]) => id !== pokemonId),
-          ),
+        : removePokemonGroupAssignment(sessionPlan.pokemonGroupAssignments, pokemonId),
     })
   }
   return (
@@ -578,7 +581,7 @@ function App() {
                       {playerGroups.map((group) => (
                         <option key={`assign-${pokemon.id}-${group.id}`} value={group.id}>
                           {group.parentGroupId
-                            ? `Child of ${playerGroupNameById.get(group.parentGroupId) ?? 'group'}: ${group.name}`
+                            ? `Parent: ${playerGroupNameById.get(group.parentGroupId) ?? 'group'} • ${group.name}`
                             : group.name}
                         </option>
                       ))}

@@ -112,7 +112,11 @@ describe('planner csv parsing', () => {
   it('normalizes and truncates group ids consistently', () => {
     const groupId = createGroupId('  Ash Ketchum The Trainer  ', '  Bright   Biome Living Zone  ', 35)
 
-    expect(groupId).toBe('ash-ketchum-the-:bright-biome-living-zone:z')
+    const [ownerPart, namePart, timestampPart] = groupId.split(':')
+    expect(ownerPart).toHaveLength(16)
+    expect(ownerPart).toBe('ash-ketchum-the-')
+    expect(namePart).toBe('bright-biome-living-zone')
+    expect(timestampPart).toBe('z')
   })
 
   it('uses fallback tokens for empty owner or group names', () => {
