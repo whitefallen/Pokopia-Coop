@@ -1,5 +1,5 @@
 import { createReadStream, existsSync } from 'node:fs'
-import { extname, join, normalize, relative } from 'node:path'
+import { extname, join, normalize, resolve } from 'node:path'
 import { createServer } from 'node:http'
 import { WebSocket, WebSocketServer } from 'ws'
 
@@ -30,13 +30,9 @@ function getSessionIdFromRequest(req) {
 function safePath(pathname) {
   const decoded = decodeURIComponent(pathname)
   const normalizedPath = normalize(decoded).replace(/^[/\\]+/, '')
-  const resolved = join(DIST_DIR, normalizedPath)
-  const pathRelativeToDist = relative(DIST_DIR, resolved)
-  if (
-    pathRelativeToDist.startsWith('..') ||
-    pathRelativeToDist.includes('../') ||
-    pathRelativeToDist.includes('..\\')
-  ) {
+  const resolved = resolve(DIST_DIR, normalizedPath)
+  const distPrefix = `${DIST_DIR}/`
+  if (resolved !== DIST_DIR && !resolved.startsWith(distPrefix)) {
     return DIST_DIR
   }
   return resolved

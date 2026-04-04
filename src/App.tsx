@@ -28,12 +28,85 @@ const normalizeSessionPlanRecord = (record: SessionPlanRecord): SessionPlanRecor
   groups: record.groups ?? {},
   pokemonGroupAssignments: record.pokemonGroupAssignments ?? {},
 })
+const isSameOverrideRecord = (
+  left: SessionPlanRecord['overrides'],
+  right: SessionPlanRecord['overrides'],
+): boolean => {
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+  if (leftKeys.length !== rightKeys.length) {
+    return false
+  }
+
+  for (const key of leftKeys) {
+    const leftValue = left[key]
+    const rightValue = right[key]
+    if (!rightValue) {
+      return false
+    }
+    if (leftValue.owner !== rightValue.owner || leftValue.moved !== rightValue.moved) {
+      return false
+    }
+  }
+
+  return true
+}
+const isSameGroupRecord = (
+  left: SessionPlanRecord['groups'],
+  right: SessionPlanRecord['groups'],
+): boolean => {
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+  if (leftKeys.length !== rightKeys.length) {
+    return false
+  }
+
+  for (const key of leftKeys) {
+    const leftValue = left[key]
+    const rightValue = right[key]
+    if (!rightValue) {
+      return false
+    }
+    if (
+      leftValue.id !== rightValue.id ||
+      leftValue.owner !== rightValue.owner ||
+      leftValue.name !== rightValue.name ||
+      leftValue.parentGroupId !== rightValue.parentGroupId
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
+const isSameAssignmentRecord = (
+  left: SessionPlanRecord['pokemonGroupAssignments'],
+  right: SessionPlanRecord['pokemonGroupAssignments'],
+): boolean => {
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+  if (leftKeys.length !== rightKeys.length) {
+    return false
+  }
+
+  for (const key of leftKeys) {
+    if (left[key] !== right[key]) {
+      return false
+    }
+  }
+
+  return true
+}
 const shouldReplaceSessionPlan = (
   current: SessionPlanRecord,
   next: SessionPlanRecord,
 ): boolean =>
   next.updatedAt > current.updatedAt ||
-  (next.updatedAt === current.updatedAt && JSON.stringify(next) !== JSON.stringify(current))
+  (next.updatedAt === current.updatedAt &&
+    (next.sessionId !== current.sessionId ||
+      !isSameOverrideRecord(next.overrides, current.overrides) ||
+      !isSameGroupRecord(next.groups, current.groups) ||
+      !isSameAssignmentRecord(next.pokemonGroupAssignments, current.pokemonGroupAssignments)))
 const removePokemonGroupAssignment = (
   assignments: Record<string, string>,
   pokemonId: string,
