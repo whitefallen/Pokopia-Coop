@@ -38,3 +38,17 @@ Testing is a core project fundamental:
 npm run build
 npm run preview
 ```
+
+## Docker Compose deployment
+
+```bash
+docker compose up --build -d
+```
+
+The app will be available at `http://localhost:4173`.
+
+To stop it:
+
+```bash
+docker compose down
+```
