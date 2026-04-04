@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   applySessionOverrides,
+  createGroupId,
   createNextSessionGroupRecord,
   createNextSessionPlanRecord,
   parsePokemonCsv,
@@ -82,19 +83,21 @@ describe('planner csv parsing', () => {
       pokemonGroupAssignments: {},
     }
 
+    const groupId = createGroupId('Ash', 'Bright', 1)
+
     const next = createNextSessionGroupRecord(
       current,
       {
         groups: {
-          'ash:bright:m1': {
-            id: 'ash:bright:m1',
+          [groupId]: {
+            id: groupId,
             owner: 'Ash',
             name: 'Bright',
             parentGroupId: null,
           },
         },
         pokemonGroupAssignments: {
-          '#001|Bulbasaur': 'ash:bright:m1',
+          '#001|Bulbasaur': groupId,
         },
       },
       25,
@@ -102,7 +105,7 @@ describe('planner csv parsing', () => {
 
     expect(next.updatedAt).toBe(25)
     expect(next.overrides).toEqual(current.overrides)
-    expect(next.groups['ash:bright:m1']?.name).toBe('Bright')
-    expect(next.pokemonGroupAssignments['#001|Bulbasaur']).toBe('ash:bright:m1')
+    expect(next.groups[groupId]?.name).toBe('Bright')
+    expect(next.pokemonGroupAssignments['#001|Bulbasaur']).toBe(groupId)
   })
 })

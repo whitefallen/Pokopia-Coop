@@ -171,6 +171,22 @@ function App() {
       ),
     [playerName, sessionPlan.groups],
   )
+  const playerGroupNameById = useMemo(
+    () => new Map(playerGroups.map((group) => [group.id, group.name])),
+    [playerGroups],
+  )
+  const playerGroupChildrenByParent = useMemo(() => {
+    const map = new Map<string, PlayerGroup[]>()
+
+    for (const group of playerGroups) {
+      const parentKey = group.parentGroupId ?? ''
+      const existing = map.get(parentKey) ?? []
+      existing.push(group)
+      map.set(parentKey, existing)
+    }
+
+    return map
+  }, [playerGroups])
   const groupedPokemonByGroup = useMemo(() => {
     const grouped = new Map<string, typeof assignedToCurrentPlayer>()
     for (const pokemon of assignedToCurrentPlayer) {
@@ -293,8 +309,19 @@ function App() {
           ),
     })
   }
-  const renderGroupBranch = (group: PlayerGroup) => {
-    const children = playerGroups.filter((entry) => entry.parentGroupId === group.id)
+  const renderGroupBranch = (group: PlayerGroup, visitedIds: Set<string>) => {
+    if (visitedIds.has(group.id)) {
+      return (
+        <li key={group.id}>
+          <strong>{group.name}</strong> <span>(cycle detected)</span>
+        </li>
+      )
+    }
+
+    const nextVisitedIds = new Set(visitedIds)
+    nextVisitedIds.add(group.id)
+
+    const children = playerGroupChildrenByParent.get(group.id) ?? []
     const pokemonInGroup = groupedPokemonByGroup.get(group.id) ?? []
 
     return (
@@ -307,7 +334,9 @@ function App() {
             ))}
           </ul>
         ) : null}
-        {children.length ? <ul>{children.map((childGroup) => renderGroupBranch(childGroup))}</ul> : null}
+        {children.length ? (
+          <ul>{children.map((childGroup) => renderGroupBranch(childGroup, nextVisitedIds))}</ul>
+        ) : null}
       </li>
     )
   }
@@ -541,8 +570,9 @@ function App() {
                       <option value="">Ungrouped</option>
                       {playerGroups.map((group) => (
                         <option key={`assign-${pokemon.id}-${group.id}`} value={group.id}>
-                          {group.parentGroupId ? '↳ ' : ''}
-                          {group.name}
+                          {group.parentGroupId
+                            ? `Child of ${playerGroupNameById.get(group.parentGroupId) ?? 'group'}: ${group.name}`
+                            : group.name}
                         </option>
                       ))}
                     </select>
@@ -556,9 +586,9 @@ function App() {
                 <p>No groups yet.</p>
               ) : (
                 <ul>
-                  {playerGroups
-                    .filter((group) => !group.parentGroupId)
-                    .map((rootGroup) => renderGroupBranch(rootGroup))}
+                  {(playerGroupChildrenByParent.get('') ?? []).map((rootGroup) =>
+                    renderGroupBranch(rootGroup, new Set()),
+                  )}
                 </ul>
               )}
               {ungroupedAssignedPokemon.length > 0 ? (
