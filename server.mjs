@@ -21,6 +21,7 @@ const MIME_TYPES = {
 }
 
 const sessionSockets = new Map()
+const sessionSnapshots = new Map()
 
 function getSessionIdFromRequest(req) {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
@@ -71,16 +72,23 @@ wss.on('connection', (socket, req, sessionId) => {
   }
   peers.add(socket)
 
+  const snapshot = sessionSnapshots.get(sessionId)
+  if (snapshot) {
+    socket.send(snapshot)
+  }
+
   socket.on('message', (data) => {
     const sessionPeers = sessionSockets.get(sessionId)
     if (!sessionPeers) {
       return
     }
+    const payload = typeof data === 'string' ? data : data.toString()
+    sessionSnapshots.set(sessionId, payload)
     for (const peer of sessionPeers) {
       if (peer === socket || peer.readyState !== WebSocket.OPEN) {
         continue
       }
-      peer.send(data)
+      peer.send(payload)
     }
   })
 
