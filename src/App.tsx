@@ -438,8 +438,11 @@ function App() {
         )}
       </section>
 
-      <section className="step-card" aria-label="Step 2 shared planner workspace">
-        <h3 className="section-subtitle">Shared planner workspace</h3>
+      <section className="step-card" aria-labelledby="step-2-workspace-heading">
+        <p className="step-label">Step 2</p>
+        <h3 id="step-2-workspace-heading" className="section-subtitle">
+          Shared planner workspace
+        </h3>
         {!canPlan ? (
           <div className="planner-locked" role="status" aria-live="polite">
             Complete Step 2 to start planning in this session.
