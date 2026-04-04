@@ -1,0 +1,266 @@
+:root {
+  color: #e2e8f0;
+  background: #0f172a;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(59, 130, 246, 0.28), transparent 46%),
+    radial-gradient(circle at right, rgba(34, 197, 94, 0.18), transparent 36%),
+    #020617;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 20px 36px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 2rem;
+  letter-spacing: 0.01em;
+}
+
+.header p {
+  margin-top: 10px;
+  color: #bfdbfe;
+}
+
+.step-card {
+  margin-top: 18px;
+  padding: 16px;
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.86), rgba(15, 23, 42, 0.7));
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 16px 44px rgba(2, 6, 23, 0.35);
+}
+
+.step-label {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #7dd3fc;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.step-card h2 {
+  margin: 6px 0 0;
+  font-size: 1.25rem;
+  color: #f8fafc;
+}
+
+.section-subtitle {
+  margin: 0;
+  font-size: 1rem;
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.session-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.session-actions input {
+  min-width: min(100%, 420px);
+  width: 100%;
+  max-width: 520px;
+  padding: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.75);
+  color: #f1f5f9;
+}
+
+.session-actions button,
+.player-controls button,
+.existing-player-choice button,
+.known-players button,
+.group-create button {
+  border: 1px solid rgba(125, 211, 252, 0.45);
+  background: linear-gradient(160deg, rgba(37, 99, 235, 0.4), rgba(14, 116, 144, 0.35));
+  color: #f8fafc;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease;
+}
+
+.session-actions button:hover,
+.player-controls button:hover,
+.existing-player-choice button:hover,
+.known-players button:hover,
+.group-create button:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.player-prompt {
+  margin-top: 8px;
+}
+
+.player-prompt h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.player-controls {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.player-controls input {
+  min-width: 220px;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.known-players {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.known-players span {
+  color: #bfdbfe;
+  font-size: 0.95rem;
+}
+
+.existing-player-choice {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.existing-player-choice p,
+.player-active {
+  color: #cbd5e1;
+}
+
+.planner-locked {
+  margin-top: 10px;
+  color: #94a3b8;
+}
+
+.group-create {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.group-create input,
+.group-create select,
+.group-assignment-item select {
+  min-width: 180px;
+  padding: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.7);
+  color: #f1f5f9;
+}
+
+.group-assignment-list {
+  margin-top: 14px;
+}
+
+.group-assignment-list h3,
+.group-tree h3,
+.group-tree h4 {
+  margin: 10px 0 6px;
+}
+
+.group-assignment-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.group-assignment-item span {
+  min-width: 120px;
+  color: #cbd5e1;
+}
+
+.group-tree {
+  margin-top: 12px;
+}
+
+.stats {
+  margin-top: 10px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-weight: 600;
+}
+
+.controls {
+  margin-top: 20px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.controls label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.controls input,
+.controls select,
+td select {
+  min-width: 180px;
+  padding: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.75);
+  color: #f8fafc;
+}
+
+.table-wrap {
+  margin-top: 14px;
+  overflow: auto;
+  background: rgba(15, 23, 42, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  white-space: nowrap;
+}
+
+th {
+  background: rgba(30, 41, 59, 0.9);
+  color: #e2e8f0;
+}

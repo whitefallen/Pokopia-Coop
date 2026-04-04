@@ -1,0 +1,9 @@
+services:
+  pokopia-coop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pokopia-coop:latest
+    ports:
+      - '4173:4173'
+    restart: unless-stopped
