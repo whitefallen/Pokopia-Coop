@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import csvBaseline from '../pokopia_assignment - Sheet1.csv?raw'
 import {
   applySessionOverrides,
@@ -28,6 +28,85 @@ const normalizeSessionPlanRecord = (record: SessionPlanRecord): SessionPlanRecor
   groups: record.groups ?? {},
   pokemonGroupAssignments: record.pokemonGroupAssignments ?? {},
 })
+const isSameOverrideRecord = (
+  left: SessionPlanRecord['overrides'],
+  right: SessionPlanRecord['overrides'],
+): boolean => {
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+  if (leftKeys.length !== rightKeys.length) {
+    return false
+  }
+
+  for (const key of leftKeys) {
+    const leftValue = left[key]
+    const rightValue = right[key]
+    if (!(key in right) || !rightValue) {
+      return false
+    }
+    if (leftValue.owner !== rightValue.owner || leftValue.moved !== rightValue.moved) {
+      return false
+    }
+  }
+
+  return true
+}
+const isSameGroupRecord = (
+  left: SessionPlanRecord['groups'],
+  right: SessionPlanRecord['groups'],
+): boolean => {
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+  if (leftKeys.length !== rightKeys.length) {
+    return false
+  }
+
+  for (const key of leftKeys) {
+    const leftValue = left[key]
+    const rightValue = right[key]
+    if (!(key in right) || !rightValue) {
+      return false
+    }
+    if (
+      leftValue.id !== rightValue.id ||
+      leftValue.owner !== rightValue.owner ||
+      leftValue.name !== rightValue.name ||
+      leftValue.parentGroupId !== rightValue.parentGroupId
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
+const isSameAssignmentRecord = (
+  left: SessionPlanRecord['pokemonGroupAssignments'],
+  right: SessionPlanRecord['pokemonGroupAssignments'],
+): boolean => {
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+  if (leftKeys.length !== rightKeys.length) {
+    return false
+  }
+
+  for (const key of leftKeys) {
+    if (left[key] !== right[key]) {
+      return false
+    }
+  }
+
+  return true
+}
+const shouldReplaceSessionPlan = (
+  current: SessionPlanRecord,
+  next: SessionPlanRecord,
+): boolean =>
+  next.updatedAt > current.updatedAt ||
+  (next.updatedAt === current.updatedAt &&
+    (next.sessionId !== current.sessionId ||
+      !isSameOverrideRecord(next.overrides, current.overrides) ||
+      !isSameGroupRecord(next.groups, current.groups) ||
+      !isSameAssignmentRecord(next.pokemonGroupAssignments, current.pokemonGroupAssignments)))
 const removePokemonGroupAssignment = (
   assignments: Record<string, string>,
   pokemonId: string,
@@ -91,6 +170,26 @@ function App() {
   const [ownerFilter, setOwnerFilter] = useState('All')
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupParent, setNewGroupParent] = useState('')
+  const applyIncomingPlan = useCallback((record: SessionPlanRecord) => {
+    const next = normalizeSessionPlanRecord(record)
+    if (!next?.updatedAt) {
+      return
+    }
+    setSessionPlan((current) => (shouldReplaceSessionPlan(current, next) ? next : current))
+  }, [])
+  const sendRealtimeUpdate = useCallback(
+    (record: SessionPlanRecord) => {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const channel = new BroadcastChannel(`${CHANNEL_PREFIX}${sessionId}`)
+        channel.postMessage(record)
+        channel.close()
+      }
+      if (typeof WebSocket !== 'undefined' && socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify(record))
+      }
+    },
+    [sessionId],
+  )
 
   const baselinePokemon = useMemo(() => parsePokemonCsv(csvBaseline), [])
   const shareLink = useMemo(() => {
@@ -153,8 +252,7 @@ function App() {
           return
         }
 
-        const normalized = normalizeSessionPlanRecord(stored)
-        setSessionPlan((current) => (normalized.updatedAt > current.updatedAt ? normalized : current))
+        applyIncomingPlan(stored)
       })
       .catch(() => {
         // ignore db read errors and continue with baseline
@@ -163,7 +261,7 @@ function App() {
     return () => {
       isActive = false
     }
-  }, [sessionId])
+  }, [applyIncomingPlan, sessionId])
 
   useEffect(() => {
     const channelName = `${CHANNEL_PREFIX}${sessionId}`
@@ -173,10 +271,7 @@ function App() {
       if (!event.data) {
         return
       }
-      const next = normalizeSessionPlanRecord(event.data)
-      if (next?.updatedAt) {
-        setSessionPlan((current) => (next.updatedAt > current.updatedAt ? next : current))
-      }
+      applyIncomingPlan(event.data)
     }
 
     channel?.addEventListener('message', handleMessage)
@@ -185,7 +280,7 @@ function App() {
       channel?.removeEventListener('message', handleMessage)
       channel?.close()
     }
-  }, [sessionId])
+  }, [applyIncomingPlan, sessionId])
 
   useEffect(() => {
     if (typeof WebSocket === 'undefined') {
@@ -203,10 +298,7 @@ function App() {
 
       try {
         const parsed = JSON.parse(event.data) as SessionPlanRecord
-        const next = normalizeSessionPlanRecord(parsed)
-        if (next?.updatedAt) {
-          setSessionPlan((current) => (next.updatedAt > current.updatedAt ? next : current))
-        }
+        applyIncomingPlan(parsed)
       } catch {
         // ignore malformed realtime payloads
       }
@@ -218,7 +310,7 @@ function App() {
       }
       socket.close()
     }
-  }, [sessionId])
+  }, [applyIncomingPlan, sessionId])
 
   const visiblePokemon = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
@@ -289,14 +381,7 @@ function App() {
       const next = createNextSessionPlanRecord(current, pokemonId, update)
       void saveSessionPlan(next)
 
-      if (typeof BroadcastChannel !== 'undefined') {
-        const channel = new BroadcastChannel(`${CHANNEL_PREFIX}${sessionId}`)
-        channel.postMessage(next)
-        channel.close()
-      }
-      if (typeof WebSocket !== 'undefined' && socketRef.current?.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify(next))
-      }
+      sendRealtimeUpdate(next)
 
       return next
     })
@@ -308,14 +393,7 @@ function App() {
       const next = createNextSessionGroupRecord(current, update)
       void saveSessionPlan(next)
 
-      if (typeof BroadcastChannel !== 'undefined') {
-        const channel = new BroadcastChannel(`${CHANNEL_PREFIX}${sessionId}`)
-        channel.postMessage(next)
-        channel.close()
-      }
-      if (typeof WebSocket !== 'undefined' && socketRef.current?.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify(next))
-      }
+      sendRealtimeUpdate(next)
 
       return next
     })
