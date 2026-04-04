@@ -5,7 +5,7 @@ import nginxConfig from '../docker/nginx.conf?raw'
 import readme from '../README.md?raw'
 
 describe('docker deployment artifacts', () => {
-  it('uses nginx runtime with SPA fallback and compose port 4173 mapping', async () => {
+  it('uses nginx runtime with SPA fallback and compose port 4173 mapping', () => {
     expect(dockerfile).toContain('FROM nginx:1.29-alpine AS runtime')
     expect(dockerfile).toContain('COPY docker/nginx.conf /etc/nginx/conf.d/default.conf')
     expect(dockerfile).toContain('COPY --from=build /app/dist /usr/share/nginx/html')
