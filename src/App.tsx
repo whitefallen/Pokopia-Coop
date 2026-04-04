@@ -439,7 +439,7 @@ function App() {
       </section>
 
       <section className="step-card" aria-labelledby="step-2-workspace-heading">
-        <p className="step-label">Step 2</p>
+        <p className="step-label">Step 2 (continued)</p>
         <h3 id="step-2-workspace-heading" className="section-subtitle">
           Shared planner workspace
         </h3>
@@ -535,7 +535,7 @@ function App() {
 
       <section className="step-card" aria-labelledby="step-3-heading">
         <p className="step-label">Step 3</p>
-        <h2 id="step-3-heading">Personal grouping</h2>
+        <h2 id="step-3-heading">Personal Pokémon groups</h2>
         {!canPlan ? (
           <div className="planner-locked" role="status" aria-live="polite">
             Complete Step 2 to manage your groups.
