@@ -32,10 +32,14 @@ function safePath(pathname) {
   const normalizedPath = normalize(decoded).replace(/^[/\\]+/, '')
   const resolved = join(DIST_DIR, normalizedPath)
   const pathRelativeToDist = relative(DIST_DIR, resolved)
-  if (!pathRelativeToDist || (!pathRelativeToDist.startsWith('..') && !pathRelativeToDist.includes('..\\'))) {
-    return resolved
+  if (
+    pathRelativeToDist.startsWith('..') ||
+    pathRelativeToDist.includes('../') ||
+    pathRelativeToDist.includes('..\\')
+  ) {
+    return DIST_DIR
   }
-  return DIST_DIR
+  return resolved
 }
 
 function serveFile(res, path, fallbackToIndex = true) {
