@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import csvBaseline from '../pokopia_assignment - Sheet1.csv?raw'
 import {
   applySessionOverrides,
@@ -75,6 +75,7 @@ const renderGroupBranch = (
 
 function App() {
   const [sessionId] = useState(resolveSessionId)
+  const socketRef = useRef<WebSocket | null>(null)
   const [playerName, setPlayerName] = useState(() => resolvePlayerName(sessionId))
   const [playerInput, setPlayerInput] = useState('')
   const [pendingExistingPlayer, setPendingExistingPlayer] = useState('')
@@ -186,6 +187,39 @@ function App() {
     }
   }, [sessionId])
 
+  useEffect(() => {
+    if (typeof WebSocket === 'undefined') {
+      return
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const socket = new WebSocket(`${protocol}//${window.location.host}/ws?session=${encodeURIComponent(sessionId)}`)
+    socketRef.current = socket
+
+    socket.addEventListener('message', (event) => {
+      if (typeof event.data !== 'string') {
+        return
+      }
+
+      try {
+        const parsed = JSON.parse(event.data) as SessionPlanRecord
+        const next = normalizeSessionPlanRecord(parsed)
+        if (next?.updatedAt) {
+          setSessionPlan((current) => (next.updatedAt > current.updatedAt ? next : current))
+        }
+      } catch {
+        // ignore malformed realtime payloads
+      }
+    })
+
+    return () => {
+      if (socketRef.current === socket) {
+        socketRef.current = null
+      }
+      socket.close()
+    }
+  }, [sessionId])
+
   const visiblePokemon = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
 
@@ -260,6 +294,9 @@ function App() {
         channel.postMessage(next)
         channel.close()
       }
+      if (typeof WebSocket !== 'undefined' && socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify(next))
+      }
 
       return next
     })
@@ -275,6 +312,9 @@ function App() {
         const channel = new BroadcastChannel(`${CHANNEL_PREFIX}${sessionId}`)
         channel.postMessage(next)
         channel.close()
+      }
+      if (typeof WebSocket !== 'undefined' && socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify(next))
       }
 
       return next

@@ -27,10 +27,13 @@ vi.mock('./sessionDb', () => ({
 }))
 
 describe('App', () => {
+  const originalWebSocket = globalThis.WebSocket
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
   afterEach(() => {
+    globalThis.WebSocket = originalWebSocket
     cleanup()
   })
 
@@ -160,5 +163,56 @@ describe('App', () => {
     const bulbasaurGroupSelect = screen.getByLabelText('Group for Bulbasaur') as HTMLSelectElement
     await user.selectOptions(bulbasaurGroupSelect, bulbasaurGroupSelect.options[1])
     expect(saveSessionPlan).toHaveBeenCalled()
+  })
+
+  it('sends session updates through websocket transport', async () => {
+    const user = userEvent.setup()
+    const sentMessages: string[] = []
+    const openedUrls: string[] = []
+
+    class FakeWebSocket {
+      static OPEN = 1
+      readyState = 1
+
+      constructor(url: string | URL) {
+        openedUrls.push(String(url))
+      }
+
+      addEventListener(): void {}
+
+      close(): void {
+        this.readyState = 3
+      }
+
+      send(payload: string): void {
+        sentMessages.push(payload)
+      }
+    }
+
+    globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket
+
+    vi.mocked(loadSessionPlan).mockResolvedValueOnce({
+      sessionId: 'group-a',
+      updatedAt: 20,
+      overrides: {
+        '#001|Bulbasaur': { owner: '' },
+      },
+      groups: {},
+      pokemonGroupAssignments: {},
+    })
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Owner for Bulbasaur')).toHaveValue('')
+    })
+
+    await user.click(screen.getByLabelText('Moved status for Bulbasaur'))
+
+    expect(openedUrls.some((url) => url.endsWith('/ws?session=group-a'))).toBe(true)
+    expect(sentMessages.length).toBeGreaterThan(0)
+    const latestMessage = sentMessages.at(-1)
+    expect(latestMessage).toContain('"sessionId":"group-a"')
+    expect(latestMessage).toContain('"moved":true')
   })
 })
