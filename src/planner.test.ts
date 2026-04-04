@@ -108,4 +108,16 @@ describe('planner csv parsing', () => {
     expect(next.groups[groupId]?.name).toBe('Bright')
     expect(next.pokemonGroupAssignments['#001|Bulbasaur']).toBe(groupId)
   })
+
+  it('normalizes and truncates group ids consistently', () => {
+    const groupId = createGroupId('  Ash Ketchum The Trainer  ', '  Bright   Biome Living Zone  ', 35)
+
+    expect(groupId).toBe('ash-ketchum-the-:bright-biome-living-zone:z')
+  })
+
+  it('uses fallback tokens for empty owner or group names', () => {
+    const groupId = createGroupId('   ', '   ', 1)
+
+    expect(groupId).toBe('player:group:1')
+  })
 })

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import csvBaseline from '../pokopia_assignment - Sheet1.csv?raw'
 import {
   applySessionOverrides,
@@ -28,6 +28,45 @@ const normalizeSessionPlanRecord = (record: SessionPlanRecord): SessionPlanRecor
   groups: record.groups ?? {},
   pokemonGroupAssignments: record.pokemonGroupAssignments ?? {},
 })
+const renderGroupBranch = (
+  group: PlayerGroup,
+  groupChildrenByParent: Map<string, PlayerGroup[]>,
+  groupedPokemonByGroup: Map<string, ReturnType<typeof parsePokemonCsv>>,
+  visitedIds: Set<string>,
+): ReactElement => {
+  if (visitedIds.has(group.id)) {
+    return (
+      <li key={group.id}>
+        <strong>{group.name}</strong> <span>(cycle detected)</span>
+      </li>
+    )
+  }
+
+  const nextVisitedIds = new Set(visitedIds)
+  nextVisitedIds.add(group.id)
+  const children = groupChildrenByParent.get(group.id) ?? []
+  const pokemonInGroup = groupedPokemonByGroup.get(group.id) ?? []
+
+  return (
+    <li key={group.id}>
+      <strong>{group.name}</strong> <span>({pokemonInGroup.length})</span>
+      {pokemonInGroup.length ? (
+        <ul>
+          {pokemonInGroup.map((pokemon) => (
+            <li key={`${group.id}-${pokemon.id}`}>{pokemon.name}</li>
+          ))}
+        </ul>
+      ) : null}
+      {children.length ? (
+        <ul>
+          {children.map((childGroup) =>
+            renderGroupBranch(childGroup, groupChildrenByParent, groupedPokemonByGroup, nextVisitedIds),
+          )}
+        </ul>
+      ) : null}
+    </li>
+  )
+}
 
 function App() {
   const [sessionId] = useState(resolveSessionId)
@@ -309,38 +348,6 @@ function App() {
           ),
     })
   }
-  const renderGroupBranch = (group: PlayerGroup, visitedIds: Set<string>) => {
-    if (visitedIds.has(group.id)) {
-      return (
-        <li key={group.id}>
-          <strong>{group.name}</strong> <span>(cycle detected)</span>
-        </li>
-      )
-    }
-
-    const nextVisitedIds = new Set(visitedIds)
-    nextVisitedIds.add(group.id)
-
-    const children = playerGroupChildrenByParent.get(group.id) ?? []
-    const pokemonInGroup = groupedPokemonByGroup.get(group.id) ?? []
-
-    return (
-      <li key={group.id}>
-        <strong>{group.name}</strong> <span>({pokemonInGroup.length})</span>
-        {pokemonInGroup.length ? (
-          <ul>
-            {pokemonInGroup.map((pokemon) => (
-              <li key={`${group.id}-${pokemon.id}`}>{pokemon.name}</li>
-            ))}
-          </ul>
-        ) : null}
-        {children.length ? (
-          <ul>{children.map((childGroup) => renderGroupBranch(childGroup, nextVisitedIds))}</ul>
-        ) : null}
-      </li>
-    )
-  }
-
   return (
     <main className="app">
       <header className="header">
@@ -587,7 +594,12 @@ function App() {
               ) : (
                 <ul>
                   {(playerGroupChildrenByParent.get('') ?? []).map((rootGroup) =>
-                    renderGroupBranch(rootGroup, new Set()),
+                    renderGroupBranch(
+                      rootGroup,
+                      playerGroupChildrenByParent,
+                      groupedPokemonByGroup,
+                      new Set(),
+                    ),
                   )}
                 </ul>
               )}
