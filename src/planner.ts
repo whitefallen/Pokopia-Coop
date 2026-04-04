@@ -31,6 +31,9 @@ export interface SessionPlanRecord {
   pokemonGroupAssignments: Record<string, string>
 }
 
+const MAX_GROUP_ID_OWNER_LENGTH = 16
+const MAX_GROUP_ID_NAME_LENGTH = 24
+
 function createPokemonId(number: string, name: string): string {
   return `${number}|${name}`
 }
@@ -143,8 +146,11 @@ export function createNextSessionPlanRecord(
 }
 
 export function createGroupId(owner: string, groupName: string, now = Date.now()): string {
-  const ownerPart = owner.trim().toLowerCase().replace(/\s+/g, '-').slice(0, 16) || 'player'
-  const namePart = groupName.trim().toLowerCase().replace(/\s+/g, '-').slice(0, 24) || 'group'
+  const ownerPart =
+    owner.trim().toLowerCase().replace(/\s+/g, '-').slice(0, MAX_GROUP_ID_OWNER_LENGTH) || 'player'
+  const namePart =
+    groupName.trim().toLowerCase().replace(/\s+/g, '-').slice(0, MAX_GROUP_ID_NAME_LENGTH) ||
+    'group'
   return `${ownerPart}:${namePart}:${now.toString(36)}`
 }
 

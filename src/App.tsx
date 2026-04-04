@@ -21,6 +21,13 @@ import { loadSessionPlan, saveSessionPlan } from './sessionDb'
 import './App.css'
 
 const CHANNEL_PREFIX = 'pokopia-coop-sync:'
+const normalizeSessionPlanRecord = (record: SessionPlanRecord): SessionPlanRecord => ({
+  sessionId: record.sessionId,
+  updatedAt: record.updatedAt,
+  overrides: record.overrides ?? {},
+  groups: record.groups ?? {},
+  pokemonGroupAssignments: record.pokemonGroupAssignments ?? {},
+})
 
 function App() {
   const [sessionId] = useState(resolveSessionId)
@@ -39,13 +46,6 @@ function App() {
   const [ownerFilter, setOwnerFilter] = useState('All')
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupParent, setNewGroupParent] = useState('')
-  const normalizeSessionPlanRecord = (record: SessionPlanRecord): SessionPlanRecord => ({
-    sessionId: record.sessionId,
-    updatedAt: record.updatedAt,
-    overrides: record.overrides ?? {},
-    groups: record.groups ?? {},
-    pokemonGroupAssignments: record.pokemonGroupAssignments ?? {},
-  })
 
   const baselinePokemon = useMemo(() => parsePokemonCsv(csvBaseline), [])
   const shareLink = useMemo(() => {
