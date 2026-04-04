@@ -49,15 +49,15 @@ describe('App', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Session setup' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Player identity' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Planner workspace' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Setup' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Co-op assignment' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Shared planner workspace' })).toBeInTheDocument()
     expect(screen.getByLabelText('Shareable session link')).toBeInTheDocument()
     expect(screen.getByText(/Session:/i)).toBeInTheDocument()
     expect(screen.getByText('group-a')).toBeInTheDocument()
     expect(screen.getByText(/You are planning as/i)).toBeInTheDocument()
     expect(
-      within(screen.getByLabelText('Step 2 player identity')).getByText('Ash', { selector: 'code' }),
+      within(screen.getByLabelText('Step 2 co-op assignment')).getByText('Ash', { selector: 'code' }),
     ).toBeInTheDocument()
 
     await waitFor(() => {
@@ -109,7 +109,7 @@ describe('App', () => {
     expect(setPlayerName).toHaveBeenCalledWith('group-a', 'Misty')
     expect(screen.getByText(/You are planning as/i)).toBeInTheDocument()
     expect(
-      within(screen.getByLabelText('Step 2 player identity')).getByText('Misty', {
+      within(screen.getByLabelText('Step 2 co-op assignment')).getByText('Misty', {
         selector: 'code',
       }),
     ).toBeInTheDocument()

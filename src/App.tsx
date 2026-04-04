@@ -355,12 +355,12 @@ function App() {
     <main className="app">
       <header className="header">
         <h1>Pokopia Cooperative Planner</h1>
-        <p>Plan flow: create/share session → choose player identity → assign and track moved Pokémon.</p>
+        <p>Plan flow: Setup → Co-op Assignment → Personal Grouping.</p>
       </header>
 
-      <section className="step-card" aria-label="Step 1 session setup">
+      <section className="step-card" aria-label="Step 1 setup">
         <p className="step-label">Step 1</p>
-        <h2>Session setup</h2>
+        <h2>Setup</h2>
         <p>
           Session: <code>{sessionId}</code>
         </p>
@@ -380,9 +380,9 @@ function App() {
         </div>
       </section>
 
-      <section className="step-card" aria-label="Step 2 player identity">
+      <section className="step-card" aria-label="Step 2 co-op assignment">
         <p className="step-label">Step 2</p>
-        <h2>Player identity</h2>
+        <h2>Co-op assignment</h2>
         {showPlayerPrompt ? (
           <section className="player-prompt" aria-label="Join session">
             <p>Enter your player name so assignments can be tracked by session + player.</p>
@@ -438,9 +438,8 @@ function App() {
         )}
       </section>
 
-      <section className="step-card" aria-label="Step 3 planner workspace">
-        <p className="step-label">Step 3</p>
-        <h2>Planner workspace</h2>
+      <section className="step-card" aria-label="Step 2 shared planner workspace">
+        <h3 className="section-subtitle">Shared planner workspace</h3>
         {!canPlan ? (
           <div className="planner-locked" role="status" aria-live="polite">
             Complete Step 2 to start planning in this session.
@@ -531,9 +530,9 @@ function App() {
         )}
       </section>
 
-      <section className="step-card" aria-labelledby="step-4-heading">
-        <p className="step-label">Step 4</p>
-        <h2 id="step-4-heading">My assigned Pokémon groups</h2>
+      <section className="step-card" aria-labelledby="step-3-heading">
+        <p className="step-label">Step 3</p>
+        <h2 id="step-3-heading">Personal grouping</h2>
         {!canPlan ? (
           <div className="planner-locked" role="status" aria-live="polite">
             Complete Step 2 to manage your groups.
