@@ -9,7 +9,7 @@ import {
 } from './planner'
 
 describe('planner csv parsing', () => {
-  it('parses CSV rows into structured baseline entries', () => {
+  it('parses CSV rows into structured baseline entries without seeded owner/moved values', () => {
     const csv = [
       'Number,Name,Image,Zugehörigkeit,Moved,Specialty 1,Specialty 2,Ideal Habitat,Favorite 1,Favorite 2,Favorite 3,Favorite 4,Favorite 5,Favorite 6',
       '#001,Bulbasaur,,Thomas,,Grow,,Bright,Nature,Soft,,,,',
@@ -22,32 +22,44 @@ describe('planner csv parsing', () => {
     expect(pokemon[0]).toMatchObject({
       number: '#001',
       name: 'Bulbasaur',
-      owner: 'Thomas',
+      owner: '',
       moved: false,
       specialties: ['Grow'],
       idealHabitat: 'Bright',
     })
     expect(pokemon[0].id).toBe('#001|Bulbasaur')
     expect(pokemon[1]).toMatchObject({
-      owner: 'Daniel',
-      moved: true,
+      owner: '',
+      moved: false,
     })
+  })
+
+  it('ignores CSV owner and moved columns even when values are present', () => {
+    const csv = [
+      'Number,Name,Image,Zugehörigkeit,Moved,Specialty 1,Specialty 2,Ideal Habitat,Favorite 1,Favorite 2,Favorite 3,Favorite 4,Favorite 5,Favorite 6',
+      '#025,Pikachu,,Thomas,Yes,Electric,,Plains,Berries,,,,,',
+    ].join('\n')
+
+    const [pokemon] = parsePokemonCsv(csv)
+
+    expect(pokemon.owner).toBe('')
+    expect(pokemon.moved).toBe(false)
   })
 
   it('applies session overrides without mutating CSV baseline', () => {
     const baseline = parsePokemonCsv(
       [
         'Number,Name,Image,Zugehörigkeit,Moved,Specialty 1,Specialty 2,Ideal Habitat,Favorite 1,Favorite 2,Favorite 3,Favorite 4,Favorite 5,Favorite 6',
-        '#001,Bulbasaur,,Thomas,,Grow,,Bright,Nature,Soft,,,,',
+        '#001,Bulbasaur,,Thomas,Yes,Grow,,Bright,Nature,Soft,,,,',
       ].join('\n'),
     )
 
-    const overrides = upsertOverride({}, baseline[0].id, { owner: 'Shared', moved: true })
+    const overrides = upsertOverride({}, baseline[0].id, { owner: 'Ash', moved: true })
     const planned = applySessionOverrides(baseline, overrides)
 
-    expect(baseline[0].owner).toBe('Thomas')
+    expect(baseline[0].owner).toBe('')
     expect(baseline[0].moved).toBe(false)
-    expect(planned[0].owner).toBe('Shared')
+    expect(planned[0].owner).toBe('Ash')
     expect(planned[0].moved).toBe(true)
   })
 

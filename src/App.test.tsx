@@ -41,7 +41,7 @@ describe('App', () => {
       sessionId: 'group-a',
       updatedAt: 20,
       overrides: {
-        '#001|Bulbasaur': { owner: 'Shared' },
+        '#001|Bulbasaur': { owner: '' },
       },
       groups: {},
       pokemonGroupAssignments: {},
@@ -61,7 +61,7 @@ describe('App', () => {
     ).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Owner for Bulbasaur')).toHaveValue('Shared')
+      expect(screen.getByLabelText('Owner for Bulbasaur')).toHaveValue('')
     })
 
     const bulbasaurMoved = screen.getByLabelText('Moved status for Bulbasaur')
@@ -72,12 +72,23 @@ describe('App', () => {
     expect(savedRecord?.sessionId).toBe('group-a')
     expect(savedRecord?.overrides).toEqual(
       expect.objectContaining({
-        '#001|Bulbasaur': expect.objectContaining({ owner: 'Shared', moved: true }),
+        '#001|Bulbasaur': expect.objectContaining({ owner: '', moved: true }),
       }),
     )
 
     expect(JSON.stringify(savedRecord)).not.toContain('"name":"Bulbasaur"')
     expect(JSON.stringify(savedRecord)).not.toContain('"specialties"')
+  })
+
+  it('creates share links from the current host origin', () => {
+    vi.mocked(resolvePlayerName).mockReturnValue('')
+    window.history.replaceState({}, '', '/planner?session=group-a&player=Ash')
+
+    render(<App />)
+
+    expect(screen.getByLabelText('Shareable session link')).toHaveValue(
+      `${window.location.origin}/planner?session=group-a`,
+    )
   })
 
   it('asks for name and supports joining an existing player identity', async () => {

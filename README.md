@@ -45,7 +45,7 @@ npm run preview
 docker compose up --build -d
 ```
 
-The app will be available at `http://localhost:4173`.
+The app will be available on port `4173` of the host where you run Docker Compose.
 
 To stop it:
 

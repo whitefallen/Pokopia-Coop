@@ -81,14 +81,12 @@ export function parsePokemonCsv(csvContent: string): PokemonPlan[] {
 
   return lines.slice(1).map((line) => {
     const cells = parseCsvRow(line)
-    const owner = cells[3] || 'Shared'
-
     return {
       id: createPokemonId(cells[0], cells[1]),
       number: cells[0],
       name: cells[1],
-      owner,
-      moved: cells[4].toLowerCase() === 'yes',
+      owner: '',
+      moved: false,
       specialties: [cells[5], cells[6]].filter(Boolean),
       idealHabitat: cells[7] ?? '',
       favorites: cells.slice(8, 14).filter(Boolean),

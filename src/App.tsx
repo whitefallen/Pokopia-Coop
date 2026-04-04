@@ -105,16 +105,16 @@ function App() {
   )
 
   const ownerOptions = useMemo(() => {
-    const fromPlan = plannedPokemon.map((pokemon) => pokemon.owner)
-    const all = new Set(['Shared', ...fromPlan])
+    const fromPlan = plannedPokemon.map((pokemon) => pokemon.owner.trim())
+    const all = new Set(fromPlan)
     if (playerName) {
       all.add(playerName)
     }
     return Array.from(all).sort((left, right) => {
-      if (left === 'Shared') {
+      if (!left) {
         return -1
       }
-      if (right === 'Shared') {
+      if (!right) {
         return 1
       }
       return left.localeCompare(right)
@@ -127,7 +127,7 @@ function App() {
         new Set(
           Object.values(sessionPlan.overrides)
             .map((override) => override.owner?.trim())
-            .filter((owner): owner is string => Boolean(owner && owner !== 'Shared')),
+            .filter((owner): owner is string => Boolean(owner)),
         ),
       ),
     [sessionPlan.overrides],
@@ -475,7 +475,7 @@ function App() {
                   <option value="All">All</option>
                   {ownerOptions.map((owner) => (
                     <option key={owner} value={owner}>
-                      {owner}
+                      {owner || 'Unassigned'}
                     </option>
                   ))}
                 </select>
@@ -507,7 +507,7 @@ function App() {
                         >
                           {ownerOptions.map((owner) => (
                             <option key={`${pokemon.id}-${owner}`} value={owner}>
-                              {owner}
+                              {owner || 'Unassigned'}
                             </option>
                           ))}
                         </select>

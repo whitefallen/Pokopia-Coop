@@ -18,9 +18,11 @@ describe('docker deployment artifacts', () => {
     expect(nginxConfig).toContain('try_files $uri $uri/ /index.html;')
   })
 
-  it('documents docker compose deployment command', () => {
+  it('documents docker compose deployment command without localhost-only URL assumptions', () => {
     expect(readme).toContain('## Docker Compose deployment')
     expect(readme).toContain('docker compose up --build -d')
     expect(readme).toContain('docker compose down')
+    expect(readme).toContain('port `4173` of the host where you run Docker Compose')
+    expect(readme).not.toContain('http://localhost:4173')
   })
 })
