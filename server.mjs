@@ -1,7 +1,7 @@
 import { createReadStream, existsSync } from 'node:fs'
-import { extname, join, normalize } from 'node:path'
+import { extname, join, normalize, relative } from 'node:path'
 import { createServer } from 'node:http'
-import { WebSocketServer } from 'ws'
+import { WebSocket, WebSocketServer } from 'ws'
 
 const HOST = process.env.HOST ?? '0.0.0.0'
 const PORT = Number(process.env.PORT ?? 4173)
@@ -31,8 +31,8 @@ function safePath(pathname) {
   const decoded = decodeURIComponent(pathname)
   const normalizedPath = normalize(decoded).replace(/^[/\\]+/, '')
   const resolved = join(DIST_DIR, normalizedPath)
-  const distPrefix = `${DIST_DIR}/`
-  if (resolved === DIST_DIR || resolved.startsWith(distPrefix)) {
+  const pathRelativeToDist = relative(DIST_DIR, resolved)
+  if (!pathRelativeToDist || (!pathRelativeToDist.startsWith('..') && !pathRelativeToDist.includes('..\\'))) {
     return resolved
   }
   return DIST_DIR
@@ -77,7 +77,7 @@ wss.on('connection', (socket, req, sessionId) => {
       return
     }
     for (const peer of sessionPeers) {
-      if (peer === socket || peer.readyState !== peer.OPEN) {
+      if (peer === socket || peer.readyState !== WebSocket.OPEN) {
         continue
       }
       peer.send(data)
