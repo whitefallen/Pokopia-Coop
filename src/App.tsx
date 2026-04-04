@@ -593,7 +593,7 @@ function App() {
                   <option value="All">All</option>
                   {ownerOptions.map((owner) => (
                     <option key={owner} value={owner}>
-                      {owner || 'Unassigned'}
+                      {owner || 'Shared'}
                     </option>
                   ))}
                 </select>
@@ -625,7 +625,7 @@ function App() {
                         >
                           {ownerOptions.map((owner) => (
                             <option key={`${pokemon.id}-${owner}`} value={owner}>
-                              {owner || 'Unassigned'}
+                              {owner || 'Shared'}
                             </option>
                           ))}
                         </select>
